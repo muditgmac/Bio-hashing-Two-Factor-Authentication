@@ -59,7 +59,12 @@ UNLINKABILITY_TEST := tests/test_unlinkability.c
 UNLINKABILITY_TEST_BINARY := $(BUILD_DIR)/test_unlinkability
 UNLINKABILITY_SANITIZE_BINARY := $(BUILD_DIR)/test_unlinkability_sanitize
 
-.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-sanitize clean
+UNLINKABILITY_METRIC_SOURCE := src/unlinkability_metric.c
+UNLINKABILITY_METRIC_TEST := tests/test_unlinkability_metric.c
+UNLINKABILITY_METRIC_TEST_BINARY := $(BUILD_DIR)/test_unlinkability_metric
+UNLINKABILITY_METRIC_SANITIZE_BINARY := $(BUILD_DIR)/test_unlinkability_metric_sanitize
+
+.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric test-sanitize clean
 
 all: test
 
@@ -205,7 +210,20 @@ $(UNLINKABILITY_TEST_BINARY): \
 test-unlinkability: $(UNLINKABILITY_TEST_BINARY)
 	./$(UNLINKABILITY_TEST_BINARY)
 
-test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability
+$(UNLINKABILITY_METRIC_TEST_BINARY): \
+	$(UNLINKABILITY_METRIC_SOURCE) \
+	$(UNLINKABILITY_METRIC_TEST) \
+	include/unlinkability_metric.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		$(UNLINKABILITY_METRIC_SOURCE) \
+		$(UNLINKABILITY_METRIC_TEST) \
+		-lm \
+		-o $(UNLINKABILITY_METRIC_TEST_BINARY)
+
+test-unlinkability-metric: $(UNLINKABILITY_METRIC_TEST_BINARY)
+	./$(UNLINKABILITY_METRIC_TEST_BINARY)
+
+test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric
 
 test-sanitize: | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(SANITIZERS) -g \
@@ -275,6 +293,12 @@ test-sanitize: | $(BUILD_DIR)
 		-lm \
 		-o $(UNLINKABILITY_SANITIZE_BINARY)
 	./$(UNLINKABILITY_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(UNLINKABILITY_METRIC_SOURCE) \
+		$(UNLINKABILITY_METRIC_TEST) \
+		-lm \
+		-o $(UNLINKABILITY_METRIC_SANITIZE_BINARY)
+	./$(UNLINKABILITY_METRIC_SANITIZE_BINARY)
 
 clean:
 	rm -rf $(BUILD_DIR)
