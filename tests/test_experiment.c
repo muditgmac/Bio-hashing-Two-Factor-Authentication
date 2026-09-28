@@ -267,6 +267,85 @@ static void test_invalid_arguments_are_rejected(void)
     );
 }
 
+static void test_sample_centering_preprocessing(void)
+{
+    const double features[4U][FEATURE_COUNT] = {
+        {1.0, 2.0, 4.0, 8.0},
+        {1.1, 2.1, 4.1, 8.1},
+        {8.0, 4.0, 2.0, 1.0},
+        {8.1, 4.1, 2.1, 1.1}
+    };
+
+    const size_t subject_ids[4U] = {
+        1U,
+        1U,
+        2U,
+        2U
+    };
+
+    const BioHashConfig config = test_config();
+
+    VerificationExperimentResult result = {0};
+
+    assert(
+        run_verification_experiment_with_preprocessing(
+            &features[0][0],
+            subject_ids,
+            4U,
+            FEATURE_COUNT,
+            HASH_LENGTH,
+            EXPERIMENT_PREPROCESSING_SAMPLE_CENTER,
+            &config,
+            &result
+        ) == EXPERIMENT_OK
+    );
+
+    assert(result.sample_count == 4U);
+    assert(result.genuine_comparisons == 2U);
+    assert(result.impostor_comparisons == 4U);
+
+    assert(result.genuine_scores != NULL);
+    assert(result.impostor_scores != NULL);
+
+    verification_experiment_result_free(&result);
+}
+
+static void test_invalid_preprocessing_mode_is_rejected(void)
+{
+    const double features[4U][FEATURE_COUNT] = {
+        {1.0, 2.0, 4.0, 8.0},
+        {1.1, 2.1, 4.1, 8.1},
+        {8.0, 4.0, 2.0, 1.0},
+        {8.1, 4.1, 2.1, 1.1}
+    };
+
+    const size_t subject_ids[4U] = {
+        1U,
+        1U,
+        2U,
+        2U
+    };
+
+    const BioHashConfig config = test_config();
+
+    VerificationExperimentResult result = {0};
+
+    assert(
+        run_verification_experiment_with_preprocessing(
+            &features[0][0],
+            subject_ids,
+            4U,
+            FEATURE_COUNT,
+            HASH_LENGTH,
+            (ExperimentPreprocessingMode)99,
+            &config,
+            &result
+        ) == EXPERIMENT_INVALID_ARGUMENT
+    );
+
+    verification_experiment_result_free(&result);
+}
+
 static void test_result_free_is_safe(void)
 {
     verification_experiment_result_free(NULL);
@@ -285,6 +364,8 @@ int main(void)
     test_verification_experiment_retains_scores();
     test_experiment_requires_both_score_classes();
     test_invalid_arguments_are_rejected();
+    test_sample_centering_preprocessing();
+    test_invalid_preprocessing_mode_is_rejected();
     test_result_free_is_safe();
 
     printf(

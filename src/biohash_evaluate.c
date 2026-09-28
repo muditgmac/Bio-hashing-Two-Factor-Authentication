@@ -29,6 +29,9 @@ static void print_usage(
         "  --input FILE          CSV biometric feature dataset\n"
         "  --hash-length N       Number of BioHash bits\n"
         "\n"
+        "Preprocessing:\n"
+        "  --preprocessing MODE  none or sample-center (default: none)\n"
+        "\n"
         "BioHash token options:\n"
         "  --p N                 First Blum prime (default: 499)\n"
         "  --q N                 Second Blum prime (default: 547)\n"
@@ -428,6 +431,9 @@ static const char *experiment_status_string(
         case EXPERIMENT_ALLOCATION_FAILURE:
             return "memory allocation failure";
 
+        case EXPERIMENT_PREPROCESSING_FAILURE:
+            return "biometric preprocessing failure";
+
         case EXPERIMENT_BIOHASH_FAILURE:
             return "BioHash generation failure";
 
@@ -444,6 +450,21 @@ static const char *experiment_status_string(
     return "unknown experiment error";
 }
 
+static const char *preprocessing_mode_string(
+    ExperimentPreprocessingMode mode
+)
+{
+    switch (mode) {
+        case EXPERIMENT_PREPROCESSING_NONE:
+            return "none";
+
+        case EXPERIMENT_PREPROCESSING_SAMPLE_CENTER:
+            return "sample-center";
+    }
+
+    return "unknown";
+}
+
 int main(
     int argc,
     char **argv
@@ -454,6 +475,9 @@ int main(
 
     size_t hash_length = 0U;
     int hash_length_was_set = 0;
+
+    ExperimentPreprocessingMode preprocessing_mode =
+        EXPERIMENT_PREPROCESSING_NONE;
 
     BioHashConfig config = {
         .p = 499U,
@@ -520,6 +544,57 @@ int main(
 
             ++index;
             output_dir = argv[index];
+
+            continue;
+        }
+
+        if (
+            strcmp(
+                argv[index],
+                "--preprocessing"
+            ) == 0
+        ) {
+            if (
+                index + 1 >= argc ||
+                argv[index + 1][0] == '\0'
+            ) {
+                fprintf(
+                    stderr,
+                    "Error: --preprocessing requires "
+                    "none or sample-center.\n"
+                );
+
+                return EXIT_FAILURE;
+            }
+
+            ++index;
+
+            if (
+                strcmp(
+                    argv[index],
+                    "none"
+                ) == 0
+            ) {
+                preprocessing_mode =
+                    EXPERIMENT_PREPROCESSING_NONE;
+            } else if (
+                strcmp(
+                    argv[index],
+                    "sample-center"
+                ) == 0
+            ) {
+                preprocessing_mode =
+                    EXPERIMENT_PREPROCESSING_SAMPLE_CENTER;
+            } else {
+                fprintf(
+                    stderr,
+                    "Error: invalid preprocessing mode '%s'. "
+                    "Expected none or sample-center.\n",
+                    argv[index]
+                );
+
+                return EXIT_FAILURE;
+            }
 
             continue;
         }
@@ -748,12 +823,13 @@ int main(
     VerificationExperimentResult result = {0};
 
     const ExperimentStatus experiment_status =
-        run_verification_experiment(
+        run_verification_experiment_with_preprocessing(
             dataset.features,
             dataset.subject_ids,
             dataset.sample_count,
             dataset.feature_count,
             hash_length,
+            preprocessing_mode,
             &config,
             &result
         );
@@ -783,6 +859,7 @@ int main(
         "Samples:                    %zu\n"
         "Features per sample:        %zu\n"
         "Hash length:                %zu\n"
+        "Preprocessing:              %s\n"
         "\n"
         "Token configuration\n"
         "-------------------\n"
@@ -810,6 +887,9 @@ int main(
         result.sample_count,
         dataset.feature_count,
         hash_length,
+        preprocessing_mode_string(
+            preprocessing_mode
+        ),
         config.p,
         config.q,
         config.seed,
@@ -889,6 +969,7 @@ int main(
             .input_path = input_path,
             .feature_count = dataset.feature_count,
             .hash_length = hash_length,
+            .preprocessing_mode = preprocessing_mode,
             .biohash_config = config
         };
 

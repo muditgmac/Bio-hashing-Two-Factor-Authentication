@@ -24,6 +24,12 @@ typedef struct {
     size_t feature_count;
     size_t hash_length;
 
+    /*
+     * Preprocessing applied to feature vectors before BioHash
+     * generation.
+     */
+    ExperimentPreprocessingMode preprocessing_mode;
+
     BioHashConfig biohash_config;
 } VerificationExportMetadata;
 

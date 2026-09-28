@@ -27,6 +27,7 @@ trap cleanup EXIT HUP INT TERM
 grep -Fq "Usage:" "$TMP_DIR/help.txt"
 grep -Fq -- "--input FILE" "$TMP_DIR/help.txt"
 grep -Fq -- "--hash-length N" "$TMP_DIR/help.txt"
+grep -Fq -- "--preprocessing MODE" "$TMP_DIR/help.txt"
 
 # ------------------------------------------------------------
 # Successful end-to-end verification experiment
@@ -49,6 +50,9 @@ grep -Fq "Features per sample:        4" \
 grep -Fq "Hash length:                3" \
     "$TMP_DIR/result.txt"
 
+grep -Fq "Preprocessing:              none" \
+    "$TMP_DIR/result.txt"
+
 grep -Fq "Genuine comparisons:        2" \
     "$TMP_DIR/result.txt"
 
@@ -57,6 +61,22 @@ grep -Fq "Impostor comparisons:       4" \
 
 grep -Fq "Estimated EER:              0.000000" \
     "$TMP_DIR/result.txt"
+
+# ------------------------------------------------------------
+# Explicit sample-centering preprocessing
+# ------------------------------------------------------------
+
+"$CLI" \
+    --input examples/demo_features.csv \
+    --hash-length 3 \
+    --preprocessing sample-center \
+    > "$TMP_DIR/sample-center.txt"
+
+grep -Fq "BioHash Verification Experiment" \
+    "$TMP_DIR/sample-center.txt"
+
+grep -Fq "Preprocessing:              sample-center" \
+    "$TMP_DIR/sample-center.txt"
 
 # ------------------------------------------------------------
 # Missing input file must fail cleanly
@@ -109,6 +129,42 @@ grep -Fq -- "--hash-length is required" \
     "$TMP_DIR/missing-argument.err"
 
 # ------------------------------------------------------------
+# Invalid preprocessing mode must fail
+# ------------------------------------------------------------
+
+if "$CLI" \
+    --input examples/demo_features.csv \
+    --hash-length 3 \
+    --preprocessing invalid-mode \
+    > "$TMP_DIR/bad-preprocessing.out" \
+    2> "$TMP_DIR/bad-preprocessing.err"
+then
+    echo "Expected invalid preprocessing mode to fail." >&2
+    exit 1
+fi
+
+grep -Fq "invalid preprocessing mode" \
+    "$TMP_DIR/bad-preprocessing.err"
+
+# ------------------------------------------------------------
+# Missing preprocessing value must fail
+# ------------------------------------------------------------
+
+if "$CLI" \
+    --input examples/demo_features.csv \
+    --hash-length 3 \
+    --preprocessing \
+    > "$TMP_DIR/missing-preprocessing.out" \
+    2> "$TMP_DIR/missing-preprocessing.err"
+then
+    echo "Expected missing preprocessing mode to fail." >&2
+    exit 1
+fi
+
+grep -Fq -- "--preprocessing requires" \
+    "$TMP_DIR/missing-preprocessing.err"
+
+# ------------------------------------------------------------
 # Unknown option must fail
 # ------------------------------------------------------------
 
@@ -154,11 +210,11 @@ grep -Fq "error rates:" \
     "$TMP_DIR/export.out"
 
 grep -Fq \
-    "input_file,sample_count,feature_count,hash_length" \
+    "input_file,sample_count,feature_count,hash_length,preprocessing" \
     "$EXPORT_DIR/summary.csv"
 
 grep -Fq \
-    '"examples/demo_features.csv",4,4,3,499,547,12345' \
+    '"examples/demo_features.csv",4,4,3,none,499,547,12345' \
     "$EXPORT_DIR/summary.csv"
 
 head -n 1 "$EXPORT_DIR/genuine_scores.csv" |
@@ -215,6 +271,26 @@ grep -Fqx "0,0,0" \
 
 grep -Fqx "1,1,0" \
     "$EXPORT_DIR/error_rates.csv"
+
+# ------------------------------------------------------------
+# Sample-center export must record preprocessing metadata
+# ------------------------------------------------------------
+
+SAMPLE_CENTER_EXPORT_DIR="$TMP_DIR/sample-center-export"
+
+"$CLI" \
+    --input examples/demo_features.csv \
+    --hash-length 3 \
+    --preprocessing sample-center \
+    --output-dir "$SAMPLE_CENTER_EXPORT_DIR" \
+    > "$TMP_DIR/sample-center-export.out" \
+    2> "$TMP_DIR/sample-center-export.err"
+
+test -f "$SAMPLE_CENTER_EXPORT_DIR/summary.csv"
+
+grep -Fq \
+    '"examples/demo_features.csv",4,4,3,sample-center,499,547,12345' \
+    "$SAMPLE_CENTER_EXPORT_DIR/summary.csv"
 
 # ------------------------------------------------------------
 # --output-dir without a value must fail
