@@ -270,6 +270,65 @@ under the evaluated empirical score model.
 
 ---
 
+## Command-line verification
+
+The repository provides a command-line program for running a complete
+verification experiment from a CSV feature dataset.
+
+Build the executable with:
+
+    make cli
+
+Run the bundled synthetic example with:
+
+    ./build/biohash-evaluate \
+        --input examples/demo_features.csv \
+        --hash-length 3
+
+The input CSV uses the following structure:
+
+    subject_id,f1,f2,f3,...,fN
+    1,0.12,0.45,0.18,...,0.81
+    1,0.11,0.47,0.20,...,0.79
+    2,-0.31,0.22,0.64,...,0.14
+
+The first column identifies the subject. All remaining columns contain
+finite numeric feature values, and every sample must have the same
+feature dimensionality.
+
+The CLI reports:
+
+- dataset dimensions;
+- BioHash/token configuration;
+- genuine comparison count;
+- impostor comparison count;
+- mean genuine normalized Hamming distance;
+- mean impostor normalized Hamming distance;
+- estimated EER operating threshold;
+- FMR and FNMR at the selected operating point;
+- estimated EER.
+
+Token parameters can also be supplied explicitly:
+
+    ./build/biohash-evaluate \
+        --input examples/demo_features.csv \
+        --hash-length 3 \
+        --p 499 \
+        --q 547 \
+        --seed 12345 \
+        --threshold 0.0 \
+        --tolerance 1e-12
+
+Display all supported options with:
+
+    ./build/biohash-evaluate --help
+
+The bundled example is synthetic and exists only to demonstrate the
+software workflow. Its verification statistics are not biometric
+benchmark results.
+
+---
+
 ## Building
 
 A C11-compatible compiler and the standard math library are required.
@@ -386,7 +445,6 @@ should be used for current development and evaluation.
 
 Planned extensions include:
 
-- command-line experiment tooling;
 - real biometric dataset integration;
 - reproducible experiment configuration;
 - CSV result export;
