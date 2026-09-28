@@ -79,6 +79,11 @@ DATASET_TEST := tests/test_dataset.c
 DATASET_TEST_BINARY := $(BUILD_DIR)/test_dataset
 DATASET_SANITIZE_BINARY := $(BUILD_DIR)/test_dataset_sanitize
 
+PREPROCESSING_SOURCE := src/preprocessing.c
+PREPROCESSING_TEST := tests/test_preprocessing.c
+PREPROCESSING_TEST_BINARY := $(BUILD_DIR)/test_preprocessing
+PREPROCESSING_SANITIZE_BINARY := $(BUILD_DIR)/test_preprocessing_sanitize
+
 CLI_SOURCE := src/biohash_evaluate.c
 CLI_BINARY := $(BUILD_DIR)/biohash-evaluate
 CLI_SANITIZE_BINARY := $(BUILD_DIR)/biohash-evaluate-sanitize
@@ -89,7 +94,7 @@ RESULT_EXPORT_TEST := tests/test_result_export.c
 RESULT_EXPORT_TEST_BINARY := $(BUILD_DIR)/test_result_export
 RESULT_EXPORT_SANITIZE_BINARY := $(BUILD_DIR)/test_result_export_sanitize
 
-.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-error-rate-sweep test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-dataset test-cli cli test-sanitize clean test-result-export
+.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-error-rate-sweep test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-dataset test-preprocessing test-cli cli test-sanitize clean test-result-export
 
 all: test
 
@@ -311,6 +316,19 @@ $(DATASET_TEST_BINARY): \
 test-dataset: $(DATASET_TEST_BINARY)
 	./$(DATASET_TEST_BINARY)
 
+$(PREPROCESSING_TEST_BINARY): \
+	$(PREPROCESSING_SOURCE) \
+	$(PREPROCESSING_TEST) \
+	include/preprocessing.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		$(PREPROCESSING_SOURCE) \
+		$(PREPROCESSING_TEST) \
+		-lm \
+		-o $(PREPROCESSING_TEST_BINARY)
+
+test-preprocessing: $(PREPROCESSING_TEST_BINARY)
+	./$(PREPROCESSING_TEST_BINARY)
+
 $(CLI_BINARY): \
 	$(BBS_SOURCE) \
 	$(GRAM_SCHMIDT_SOURCE) \
@@ -353,7 +371,7 @@ cli: $(CLI_BINARY)
 test-cli: $(CLI_BINARY) $(CLI_TEST) examples/demo_features.csv
 	sh $(CLI_TEST) $(CLI_BINARY)
 
-test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-error-rate-sweep test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-dataset test-cli test-result-export
+test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-error-rate-sweep test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-dataset test-preprocessing test-cli test-result-export
 
 $(RESULT_EXPORT_TEST_BINARY): \
 	$(RESULT_EXPORT_SOURCE) \
@@ -471,6 +489,12 @@ test-sanitize: | $(BUILD_DIR)
 		-lm \
 		-o $(DATASET_SANITIZE_BINARY)
 	./$(DATASET_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(PREPROCESSING_SOURCE) \
+		$(PREPROCESSING_TEST) \
+		-lm \
+		-o $(PREPROCESSING_SANITIZE_BINARY)
+	./$(PREPROCESSING_SANITIZE_BINARY)
 	$(CC) $(CFLAGS) $(SANITIZERS) -g \
 		$(BBS_SOURCE) \
 		$(GRAM_SCHMIDT_SOURCE) \
