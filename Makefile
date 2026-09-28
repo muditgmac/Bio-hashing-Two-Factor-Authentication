@@ -64,7 +64,12 @@ UNLINKABILITY_METRIC_TEST := tests/test_unlinkability_metric.c
 UNLINKABILITY_METRIC_TEST_BINARY := $(BUILD_DIR)/test_unlinkability_metric
 UNLINKABILITY_METRIC_SANITIZE_BINARY := $(BUILD_DIR)/test_unlinkability_metric_sanitize
 
-.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric test-sanitize clean
+UNLINKABILITY_EXPERIMENT_SOURCE := src/unlinkability_experiment.c
+UNLINKABILITY_EXPERIMENT_TEST := tests/test_unlinkability_experiment.c
+UNLINKABILITY_EXPERIMENT_TEST_BINARY := $(BUILD_DIR)/test_unlinkability_experiment
+UNLINKABILITY_EXPERIMENT_SANITIZE_BINARY := $(BUILD_DIR)/test_unlinkability_experiment_sanitize
+
+.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-sanitize clean
 
 all: test
 
@@ -223,7 +228,41 @@ $(UNLINKABILITY_METRIC_TEST_BINARY): \
 test-unlinkability-metric: $(UNLINKABILITY_METRIC_TEST_BINARY)
 	./$(UNLINKABILITY_METRIC_TEST_BINARY)
 
-test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric
+$(UNLINKABILITY_EXPERIMENT_TEST_BINARY): \
+	$(BBS_SOURCE) \
+	$(GRAM_SCHMIDT_SOURCE) \
+	$(DCT_SOURCE) \
+	$(BIOHASH_SOURCE) \
+	$(MATCHER_SOURCE) \
+	$(UNLINKABILITY_SOURCE) \
+	$(UNLINKABILITY_METRIC_SOURCE) \
+	$(UNLINKABILITY_EXPERIMENT_SOURCE) \
+	$(UNLINKABILITY_EXPERIMENT_TEST) \
+	include/bbs.h \
+	include/gram_schmidt.h \
+	include/dct.h \
+	include/biohash.h \
+	include/matcher.h \
+	include/unlinkability.h \
+	include/unlinkability_metric.h \
+	include/unlinkability_experiment.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(MATCHER_SOURCE) \
+		$(UNLINKABILITY_SOURCE) \
+		$(UNLINKABILITY_METRIC_SOURCE) \
+		$(UNLINKABILITY_EXPERIMENT_SOURCE) \
+		$(UNLINKABILITY_EXPERIMENT_TEST) \
+		-lm \
+		-o $(UNLINKABILITY_EXPERIMENT_TEST_BINARY)
+
+test-unlinkability-experiment: $(UNLINKABILITY_EXPERIMENT_TEST_BINARY)
+	./$(UNLINKABILITY_EXPERIMENT_TEST_BINARY)
+
+test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment
 
 test-sanitize: | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(SANITIZERS) -g \
@@ -299,6 +338,19 @@ test-sanitize: | $(BUILD_DIR)
 		-lm \
 		-o $(UNLINKABILITY_METRIC_SANITIZE_BINARY)
 	./$(UNLINKABILITY_METRIC_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(MATCHER_SOURCE) \
+		$(UNLINKABILITY_SOURCE) \
+		$(UNLINKABILITY_METRIC_SOURCE) \
+		$(UNLINKABILITY_EXPERIMENT_SOURCE) \
+		$(UNLINKABILITY_EXPERIMENT_TEST) \
+		-lm \
+		-o $(UNLINKABILITY_EXPERIMENT_SANITIZE_BINARY)
+	./$(UNLINKABILITY_EXPERIMENT_SANITIZE_BINARY)
 
 clean:
 	rm -rf $(BUILD_DIR)
