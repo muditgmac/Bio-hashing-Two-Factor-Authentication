@@ -49,7 +49,12 @@ EXPERIMENT_TEST := tests/test_experiment.c
 EXPERIMENT_TEST_BINARY := $(BUILD_DIR)/test_experiment
 EXPERIMENT_SANITIZE_BINARY := $(BUILD_DIR)/test_experiment_sanitize
 
-.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-sanitize clean
+REVOCABILITY_SOURCE := src/revocability.c
+REVOCABILITY_TEST := tests/test_revocability.c
+REVOCABILITY_TEST_BINARY := $(BUILD_DIR)/test_revocability
+REVOCABILITY_SANITIZE_BINARY := $(BUILD_DIR)/test_revocability_sanitize
+
+.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-sanitize clean
 
 all: test
 
@@ -139,7 +144,35 @@ $(EXPERIMENT_TEST_BINARY): \
 test-experiment: $(EXPERIMENT_TEST_BINARY)
 	./$(EXPERIMENT_TEST_BINARY)
 
-test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment
+$(REVOCABILITY_TEST_BINARY): \
+	$(BBS_SOURCE) \
+	$(GRAM_SCHMIDT_SOURCE) \
+	$(DCT_SOURCE) \
+	$(BIOHASH_SOURCE) \
+	$(MATCHER_SOURCE) \
+	$(REVOCABILITY_SOURCE) \
+	$(REVOCABILITY_TEST) \
+	include/bbs.h \
+	include/gram_schmidt.h \
+	include/dct.h \
+	include/biohash.h \
+	include/matcher.h \
+	include/revocability.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(MATCHER_SOURCE) \
+		$(REVOCABILITY_SOURCE) \
+		$(REVOCABILITY_TEST) \
+		-lm \
+		-o $(REVOCABILITY_TEST_BINARY)
+
+test-revocability: $(REVOCABILITY_TEST_BINARY)
+	./$(REVOCABILITY_TEST_BINARY)
+
+test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability
 
 test-sanitize: | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(SANITIZERS) -g \
@@ -187,6 +220,17 @@ test-sanitize: | $(BUILD_DIR)
 		-lm \
 		-o $(EXPERIMENT_SANITIZE_BINARY)
 	./$(EXPERIMENT_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(MATCHER_SOURCE) \
+		$(REVOCABILITY_SOURCE) \
+		$(REVOCABILITY_TEST) \
+		-lm \
+		-o $(REVOCABILITY_SANITIZE_BINARY)
+	./$(REVOCABILITY_SANITIZE_BINARY)
 
 clean:
 	rm -rf $(BUILD_DIR)
