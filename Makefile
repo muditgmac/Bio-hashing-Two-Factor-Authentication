@@ -24,7 +24,12 @@ GRAM_SCHMIDT_TEST := tests/test_gram_schmidt.c
 GRAM_SCHMIDT_TEST_BINARY := $(BUILD_DIR)/test_gram_schmidt
 GRAM_SCHMIDT_SANITIZE_BINARY := $(BUILD_DIR)/test_gram_schmidt_sanitize
 
-.PHONY: all test test-bbs test-gram-schmidt test-sanitize clean
+DCT_SOURCE := src/dct.c
+DCT_TEST := tests/test_dct.c
+DCT_TEST_BINARY := $(BUILD_DIR)/test_dct
+DCT_SANITIZE_BINARY := $(BUILD_DIR)/test_dct_sanitize
+
+.PHONY: all test test-bbs test-gram-schmidt test-dct test-sanitize clean
 
 all: test
 
@@ -37,13 +42,19 @@ $(BBS_TEST_BINARY): $(BBS_SOURCE) $(BBS_TEST) include/bbs.h | $(BUILD_DIR)
 $(GRAM_SCHMIDT_TEST_BINARY): $(GRAM_SCHMIDT_SOURCE) $(GRAM_SCHMIDT_TEST) include/gram_schmidt.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(GRAM_SCHMIDT_SOURCE) $(GRAM_SCHMIDT_TEST) -lm -o $(GRAM_SCHMIDT_TEST_BINARY)
 
+$(DCT_TEST_BINARY): $(DCT_SOURCE) $(DCT_TEST) include/dct.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(DCT_SOURCE) $(DCT_TEST) -lm -o $(DCT_TEST_BINARY)
+
 test-bbs: $(BBS_TEST_BINARY)
 	./$(BBS_TEST_BINARY)
 
 test-gram-schmidt: $(GRAM_SCHMIDT_TEST_BINARY)
 	./$(GRAM_SCHMIDT_TEST_BINARY)
 
-test: test-bbs test-gram-schmidt
+test-dct: $(DCT_TEST_BINARY)
+	./$(DCT_TEST_BINARY)
+
+test: test-bbs test-gram-schmidt test-dct
 
 test-sanitize: | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(SANITIZERS) -g \
@@ -55,6 +66,11 @@ test-sanitize: | $(BUILD_DIR)
 		-lm \
 		-o $(GRAM_SCHMIDT_SANITIZE_BINARY)
 	./$(GRAM_SCHMIDT_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(DCT_SOURCE) $(DCT_TEST) \
+		-lm \
+		-o $(DCT_SANITIZE_BINARY)
+	./$(DCT_SANITIZE_BINARY)
 
 clean:
 	rm -rf $(BUILD_DIR)
