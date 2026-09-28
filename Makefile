@@ -299,6 +299,7 @@ $(CLI_BINARY): \
 	$(EVALUATION_SOURCE) \
 	$(EXPERIMENT_SOURCE) \
 	$(DATASET_SOURCE) \
+	$(RESULT_EXPORT_SOURCE) \
 	$(CLI_SOURCE) \
 	include/bbs.h \
 	include/gram_schmidt.h \
@@ -307,7 +308,8 @@ $(CLI_BINARY): \
 	include/matcher.h \
 	include/evaluation.h \
 	include/experiment.h \
-	include/dataset.h | $(BUILD_DIR)
+	include/dataset.h \
+	include/result_export.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) \
 		$(BBS_SOURCE) \
 		$(GRAM_SCHMIDT_SOURCE) \
@@ -317,6 +319,7 @@ $(CLI_BINARY): \
 		$(EVALUATION_SOURCE) \
 		$(EXPERIMENT_SOURCE) \
 		$(DATASET_SOURCE) \
+		$(RESULT_EXPORT_SOURCE) \
 		$(CLI_SOURCE) \
 		-lm \
 		-o $(CLI_BINARY)
@@ -445,6 +448,7 @@ test-sanitize: | $(BUILD_DIR)
 		$(EVALUATION_SOURCE) \
 		$(EXPERIMENT_SOURCE) \
 		$(DATASET_SOURCE) \
+		$(RESULT_EXPORT_SOURCE) \
 		$(CLI_SOURCE) \
 		-lm \
 		-o $(CLI_SANITIZE_BINARY)
