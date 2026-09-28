@@ -44,7 +44,12 @@ EVALUATION_TEST := tests/test_evaluation.c
 EVALUATION_TEST_BINARY := $(BUILD_DIR)/test_evaluation
 EVALUATION_SANITIZE_BINARY := $(BUILD_DIR)/test_evaluation_sanitize
 
-.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-sanitize clean
+EXPERIMENT_SOURCE := src/experiment.c
+EXPERIMENT_TEST := tests/test_experiment.c
+EXPERIMENT_TEST_BINARY := $(BUILD_DIR)/test_experiment
+EXPERIMENT_SANITIZE_BINARY := $(BUILD_DIR)/test_experiment_sanitize
+
+.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-sanitize clean
 
 all: test
 
@@ -103,7 +108,38 @@ $(EVALUATION_TEST_BINARY): $(EVALUATION_SOURCE) $(EVALUATION_TEST) include/evalu
 test-evaluation: $(EVALUATION_TEST_BINARY)
 	./$(EVALUATION_TEST_BINARY)
 
-test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation
+$(EXPERIMENT_TEST_BINARY): \
+	$(BBS_SOURCE) \
+	$(GRAM_SCHMIDT_SOURCE) \
+	$(DCT_SOURCE) \
+	$(BIOHASH_SOURCE) \
+	$(MATCHER_SOURCE) \
+	$(EVALUATION_SOURCE) \
+	$(EXPERIMENT_SOURCE) \
+	$(EXPERIMENT_TEST) \
+	include/bbs.h \
+	include/gram_schmidt.h \
+	include/dct.h \
+	include/biohash.h \
+	include/matcher.h \
+	include/evaluation.h \
+	include/experiment.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(MATCHER_SOURCE) \
+		$(EVALUATION_SOURCE) \
+		$(EXPERIMENT_SOURCE) \
+		$(EXPERIMENT_TEST) \
+		-lm \
+		-o $(EXPERIMENT_TEST_BINARY)
+
+test-experiment: $(EXPERIMENT_TEST_BINARY)
+	./$(EXPERIMENT_TEST_BINARY)
+
+test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment
 
 test-sanitize: | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(SANITIZERS) -g \
@@ -139,6 +175,18 @@ test-sanitize: | $(BUILD_DIR)
 		-lm \
 		-o $(EVALUATION_SANITIZE_BINARY)
 	./$(EVALUATION_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(MATCHER_SOURCE) \
+		$(EVALUATION_SOURCE) \
+		$(EXPERIMENT_SOURCE) \
+		$(EXPERIMENT_TEST) \
+		-lm \
+		-o $(EXPERIMENT_SANITIZE_BINARY)
+	./$(EXPERIMENT_SANITIZE_BINARY)
 
 clean:
 	rm -rf $(BUILD_DIR)
