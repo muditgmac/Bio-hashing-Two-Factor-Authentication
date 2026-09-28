@@ -39,7 +39,12 @@ MATCHER_TEST := tests/test_matcher.c
 MATCHER_TEST_BINARY := $(BUILD_DIR)/test_matcher
 MATCHER_SANITIZE_BINARY := $(BUILD_DIR)/test_matcher_sanitize
 
-.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-sanitize clean
+EVALUATION_SOURCE := src/evaluation.c
+EVALUATION_TEST := tests/test_evaluation.c
+EVALUATION_TEST_BINARY := $(BUILD_DIR)/test_evaluation
+EVALUATION_SANITIZE_BINARY := $(BUILD_DIR)/test_evaluation_sanitize
+
+.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-sanitize clean
 
 all: test
 
@@ -92,7 +97,13 @@ test-biohash: $(BIOHASH_TEST_BINARY)
 test-matcher: $(MATCHER_TEST_BINARY)
 	./$(MATCHER_TEST_BINARY)
 
-test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher
+$(EVALUATION_TEST_BINARY): $(EVALUATION_SOURCE) $(EVALUATION_TEST) include/evaluation.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(EVALUATION_SOURCE) $(EVALUATION_TEST) -lm -o $(EVALUATION_TEST_BINARY)
+
+test-evaluation: $(EVALUATION_TEST_BINARY)
+	./$(EVALUATION_TEST_BINARY)
+
+test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation
 
 test-sanitize: | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(SANITIZERS) -g \
@@ -123,6 +134,11 @@ test-sanitize: | $(BUILD_DIR)
 		-lm \
 		-o $(MATCHER_SANITIZE_BINARY)
 	./$(MATCHER_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(EVALUATION_SOURCE) $(EVALUATION_TEST) \
+		-lm \
+		-o $(EVALUATION_SANITIZE_BINARY)
+	./$(EVALUATION_SANITIZE_BINARY)
 
 clean:
 	rm -rf $(BUILD_DIR)
