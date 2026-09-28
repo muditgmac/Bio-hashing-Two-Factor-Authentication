@@ -1,5 +1,6 @@
 #include "biohash.h"
 #include "dataset.h"
+#include "error_rate_sweep.h"
 #include "experiment.h"
 #include "result_export.h"
 
@@ -36,7 +37,7 @@ static void print_usage(
         "  --tolerance X         Orthogonality tolerance (default: 1e-12)\n"
         "\n"
         "Result export:\n"
-        "  --output-dir DIR     Export summary and score CSV files\n"
+        "  --output-dir DIR     Export summary, score, and error-rate CSV files\n"
         "\n"
         "Other options:\n"
         "  --help                Show this help message\n",
@@ -336,6 +337,30 @@ static char *build_output_path(
     output_path[offset] = '\0';
 
     return output_path;
+}
+
+static const char *error_rate_sweep_status_string(
+    ErrorRateSweepStatus status
+)
+{
+    switch (status) {
+        case ERROR_RATE_SWEEP_OK:
+            return "success";
+
+        case ERROR_RATE_SWEEP_INVALID_ARGUMENT:
+            return "invalid sweep argument";
+
+        case ERROR_RATE_SWEEP_INVALID_SCORE:
+            return "invalid comparison score";
+
+        case ERROR_RATE_SWEEP_ALLOCATION_FAILURE:
+            return "memory allocation failure";
+
+        case ERROR_RATE_SWEEP_EVALUATION_FAILURE:
+            return "biometric evaluation failure";
+    }
+
+    return "unknown error-rate sweep error";
 }
 
 static const char *result_export_status_string(
@@ -832,10 +857,17 @@ int main(
                 "impostor_scores.csv"
             );
 
+        char *error_rates_path =
+            build_output_path(
+                output_dir,
+                "error_rates.csv"
+            );
+
         if (
             summary_path == NULL ||
             genuine_scores_path == NULL ||
-            impostor_scores_path == NULL
+            impostor_scores_path == NULL ||
+            error_rates_path == NULL
         ) {
             fprintf(
                 stderr,
@@ -845,6 +877,7 @@ int main(
             free(summary_path);
             free(genuine_scores_path);
             free(impostor_scores_path);
+            free(error_rates_path);
 
             verification_experiment_result_free(&result);
             dataset_free(&dataset);
@@ -858,6 +891,40 @@ int main(
             .hash_length = hash_length,
             .biohash_config = config
         };
+
+        ErrorRateSweepResult sweep = {0};
+
+        const ErrorRateSweepStatus sweep_status =
+            evaluate_error_rate_sweep(
+                result.genuine_scores,
+                result.genuine_comparisons,
+                result.impostor_scores,
+                result.impostor_comparisons,
+                hash_length,
+                &sweep
+            );
+
+        if (sweep_status != ERROR_RATE_SWEEP_OK) {
+            fprintf(
+                stderr,
+                "Error generating error-rate sweep: %s.\n",
+                error_rate_sweep_status_string(
+                    sweep_status
+                )
+            );
+
+            error_rate_sweep_result_free(&sweep);
+
+            free(summary_path);
+            free(genuine_scores_path);
+            free(impostor_scores_path);
+            free(error_rates_path);
+
+            verification_experiment_result_free(&result);
+            dataset_free(&dataset);
+
+            return EXIT_FAILURE;
+        }
 
         const ResultExportStatus export_status =
             export_verification_result_csv(
@@ -877,9 +944,43 @@ int main(
                 )
             );
 
+            error_rate_sweep_result_free(&sweep);
+
             free(summary_path);
             free(genuine_scores_path);
             free(impostor_scores_path);
+            free(error_rates_path);
+
+            verification_experiment_result_free(&result);
+            dataset_free(&dataset);
+
+            return EXIT_FAILURE;
+        }
+
+        const ResultExportStatus error_rates_export_status =
+            export_error_rate_sweep_csv(
+                &sweep,
+                error_rates_path
+            );
+
+        error_rate_sweep_result_free(&sweep);
+
+        if (
+            error_rates_export_status !=
+            RESULT_EXPORT_OK
+        ) {
+            fprintf(
+                stderr,
+                "Error exporting error-rate sweep: %s.\n",
+                result_export_status_string(
+                    error_rates_export_status
+                )
+            );
+
+            free(summary_path);
+            free(genuine_scores_path);
+            free(impostor_scores_path);
+            free(error_rates_path);
 
             verification_experiment_result_free(&result);
             dataset_free(&dataset);
@@ -892,16 +993,19 @@ int main(
             "  summary:                    %s\n"
             "  genuine scores:             %s\n"
             "  impostor scores:            %s\n"
+            "  error rates:                %s\n"
             "\n",
             output_dir,
             summary_path,
             genuine_scores_path,
-            impostor_scores_path
+            impostor_scores_path,
+            error_rates_path
         );
 
         free(summary_path);
         free(genuine_scores_path);
         free(impostor_scores_path);
+        free(error_rates_path);
     }
 
     verification_experiment_result_free(&result);

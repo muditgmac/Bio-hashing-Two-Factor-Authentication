@@ -144,8 +144,13 @@ test -d "$EXPORT_DIR"
 test -f "$EXPORT_DIR/summary.csv"
 test -f "$EXPORT_DIR/genuine_scores.csv"
 test -f "$EXPORT_DIR/impostor_scores.csv"
+test -f "$EXPORT_DIR/error_rates.csv"
 
 grep -Fq "Results exported to:" \
+    "$TMP_DIR/export.out"
+
+
+grep -Fq "error rates:" \
     "$TMP_DIR/export.out"
 
 grep -Fq \
@@ -162,6 +167,10 @@ head -n 1 "$EXPORT_DIR/genuine_scores.csv" |
 head -n 1 "$EXPORT_DIR/impostor_scores.csv" |
     grep -Fqx "comparison_index,distance"
 
+
+head -n 1 "$EXPORT_DIR/error_rates.csv" |
+    grep -Fqx "threshold,fmr,fnmr"
+
 GENUINE_LINES=$(
     wc -l < "$EXPORT_DIR/genuine_scores.csv" |
     tr -d '[:space:]'
@@ -177,9 +186,16 @@ SUMMARY_LINES=$(
     tr -d '[:space:]'
 )
 
+
+ERROR_RATE_LINES=$(
+    wc -l < "$EXPORT_DIR/error_rates.csv" |
+    tr -d '[:space:]'
+)
+
 test "$GENUINE_LINES" -eq 3
 test "$IMPOSTOR_LINES" -eq 5
 test "$SUMMARY_LINES" -eq 2
+test "$ERROR_RATE_LINES" -eq 5
 
 grep -Fqx "0,0" \
     "$EXPORT_DIR/genuine_scores.csv"
@@ -192,6 +208,13 @@ grep -Fqx "0,1" \
 
 grep -Fqx "3,1" \
     "$EXPORT_DIR/impostor_scores.csv"
+
+
+grep -Fqx "0,0,0" \
+    "$EXPORT_DIR/error_rates.csv"
+
+grep -Fqx "1,1,0" \
+    "$EXPORT_DIR/error_rates.csv"
 
 # ------------------------------------------------------------
 # --output-dir without a value must fail
