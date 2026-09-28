@@ -54,7 +54,12 @@ REVOCABILITY_TEST := tests/test_revocability.c
 REVOCABILITY_TEST_BINARY := $(BUILD_DIR)/test_revocability
 REVOCABILITY_SANITIZE_BINARY := $(BUILD_DIR)/test_revocability_sanitize
 
-.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-sanitize clean
+UNLINKABILITY_SOURCE := src/unlinkability.c
+UNLINKABILITY_TEST := tests/test_unlinkability.c
+UNLINKABILITY_TEST_BINARY := $(BUILD_DIR)/test_unlinkability
+UNLINKABILITY_SANITIZE_BINARY := $(BUILD_DIR)/test_unlinkability_sanitize
+
+.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-sanitize clean
 
 all: test
 
@@ -172,7 +177,35 @@ $(REVOCABILITY_TEST_BINARY): \
 test-revocability: $(REVOCABILITY_TEST_BINARY)
 	./$(REVOCABILITY_TEST_BINARY)
 
-test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability
+$(UNLINKABILITY_TEST_BINARY): \
+	$(BBS_SOURCE) \
+	$(GRAM_SCHMIDT_SOURCE) \
+	$(DCT_SOURCE) \
+	$(BIOHASH_SOURCE) \
+	$(MATCHER_SOURCE) \
+	$(UNLINKABILITY_SOURCE) \
+	$(UNLINKABILITY_TEST) \
+	include/bbs.h \
+	include/gram_schmidt.h \
+	include/dct.h \
+	include/biohash.h \
+	include/matcher.h \
+	include/unlinkability.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(MATCHER_SOURCE) \
+		$(UNLINKABILITY_SOURCE) \
+		$(UNLINKABILITY_TEST) \
+		-lm \
+		-o $(UNLINKABILITY_TEST_BINARY)
+
+test-unlinkability: $(UNLINKABILITY_TEST_BINARY)
+	./$(UNLINKABILITY_TEST_BINARY)
+
+test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability
 
 test-sanitize: | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(SANITIZERS) -g \
@@ -231,6 +264,17 @@ test-sanitize: | $(BUILD_DIR)
 		-lm \
 		-o $(REVOCABILITY_SANITIZE_BINARY)
 	./$(REVOCABILITY_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(MATCHER_SOURCE) \
+		$(UNLINKABILITY_SOURCE) \
+		$(UNLINKABILITY_TEST) \
+		-lm \
+		-o $(UNLINKABILITY_SANITIZE_BINARY)
+	./$(UNLINKABILITY_SANITIZE_BINARY)
 
 clean:
 	rm -rf $(BUILD_DIR)
