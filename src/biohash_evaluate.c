@@ -489,7 +489,7 @@ int main(
         return EXIT_FAILURE;
     }
 
-    VerificationExperimentResult result;
+    VerificationExperimentResult result = {0};
 
     const ExperimentStatus experiment_status =
         run_verification_experiment(
@@ -569,6 +569,7 @@ int main(
         result.equal_error_rate.eer
     );
 
+    verification_experiment_result_free(&result);
     dataset_free(&dataset);
 
     return EXIT_SUCCESS;
