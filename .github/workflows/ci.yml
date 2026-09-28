@@ -1,0 +1,57 @@
+name: C CI
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests (${{ matrix.compiler }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler:
+          - gcc
+          - clang
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Show compiler version
+        run: ${{ matrix.compiler }} --version
+
+      - name: Clean build directory
+        run: make clean
+
+      - name: Build and run test suite
+        run: make CC=${{ matrix.compiler }} test
+
+  sanitizers:
+    name: AddressSanitizer + UndefinedBehaviorSanitizer
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Show Clang version
+        run: clang --version
+
+      - name: Clean build directory
+        run: make clean
+
+      - name: Run sanitizer suite
+        run: make CC=clang test-sanitize
