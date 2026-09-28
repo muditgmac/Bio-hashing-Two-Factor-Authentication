@@ -77,6 +77,20 @@ static ExperimentStatus count_comparison_types(
     return EXPERIMENT_OK;
 }
 
+void verification_experiment_result_free(
+    VerificationExperimentResult *result
+)
+{
+    if (result == NULL) {
+        return;
+    }
+
+    free(result->genuine_scores);
+    free(result->impostor_scores);
+
+    *result = (VerificationExperimentResult){0};
+}
+
 ExperimentStatus run_verification_experiment(
     const double *feature_matrix,
     const size_t *subject_ids,
@@ -261,14 +275,18 @@ ExperimentStatus run_verification_experiment(
             genuine_sum / (double)genuine_count,
         .mean_impostor_distance =
             impostor_sum / (double)impostor_count,
-        .equal_error_rate = equal_error_rate
+        .equal_error_rate = equal_error_rate,
+        .genuine_scores = genuine_scores,
+        .impostor_scores = impostor_scores
     };
 
     *result = experiment_result;
 
+    /*
+     * The generated score arrays now belong to the returned result.
+     * Only temporary template storage is released here.
+     */
     free(templates);
-    free(genuine_scores);
-    free(impostor_scores);
 
     return EXPERIMENT_OK;
 }

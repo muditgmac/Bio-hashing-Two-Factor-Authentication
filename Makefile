@@ -79,7 +79,12 @@ CLI_BINARY := $(BUILD_DIR)/biohash-evaluate
 CLI_SANITIZE_BINARY := $(BUILD_DIR)/biohash-evaluate-sanitize
 CLI_TEST := tests/test_cli.sh
 
-.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-dataset test-cli cli test-sanitize clean
+RESULT_EXPORT_SOURCE := src/result_export.c
+RESULT_EXPORT_TEST := tests/test_result_export.c
+RESULT_EXPORT_TEST_BINARY := $(BUILD_DIR)/test_result_export
+RESULT_EXPORT_SANITIZE_BINARY := $(BUILD_DIR)/test_result_export_sanitize
+
+.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-dataset test-cli cli test-sanitize clean test-result-export
 
 all: test
 
@@ -294,6 +299,7 @@ $(CLI_BINARY): \
 	$(EVALUATION_SOURCE) \
 	$(EXPERIMENT_SOURCE) \
 	$(DATASET_SOURCE) \
+	$(RESULT_EXPORT_SOURCE) \
 	$(CLI_SOURCE) \
 	include/bbs.h \
 	include/gram_schmidt.h \
@@ -302,7 +308,8 @@ $(CLI_BINARY): \
 	include/matcher.h \
 	include/evaluation.h \
 	include/experiment.h \
-	include/dataset.h | $(BUILD_DIR)
+	include/dataset.h \
+	include/result_export.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) \
 		$(BBS_SOURCE) \
 		$(GRAM_SCHMIDT_SOURCE) \
@@ -312,6 +319,7 @@ $(CLI_BINARY): \
 		$(EVALUATION_SOURCE) \
 		$(EXPERIMENT_SOURCE) \
 		$(DATASET_SOURCE) \
+		$(RESULT_EXPORT_SOURCE) \
 		$(CLI_SOURCE) \
 		-lm \
 		-o $(CLI_BINARY)
@@ -321,7 +329,22 @@ cli: $(CLI_BINARY)
 test-cli: $(CLI_BINARY) $(CLI_TEST) examples/demo_features.csv
 	sh $(CLI_TEST) $(CLI_BINARY)
 
-test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-dataset test-cli
+test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-dataset test-cli test-result-export
+
+$(RESULT_EXPORT_TEST_BINARY): \
+	$(RESULT_EXPORT_SOURCE) \
+	$(RESULT_EXPORT_TEST) \
+	include/result_export.h \
+	include/experiment.h \
+	include/evaluation.h \
+	include/biohash.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		$(RESULT_EXPORT_SOURCE) \
+		$(RESULT_EXPORT_TEST) \
+		-o $(RESULT_EXPORT_TEST_BINARY)
+
+test-result-export: $(RESULT_EXPORT_TEST_BINARY)
+	./$(RESULT_EXPORT_TEST_BINARY)
 
 test-sanitize: | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(SANITIZERS) -g \
@@ -425,6 +448,7 @@ test-sanitize: | $(BUILD_DIR)
 		$(EVALUATION_SOURCE) \
 		$(EXPERIMENT_SOURCE) \
 		$(DATASET_SOURCE) \
+		$(RESULT_EXPORT_SOURCE) \
 		$(CLI_SOURCE) \
 		-lm \
 		-o $(CLI_SANITIZE_BINARY)
@@ -432,6 +456,12 @@ test-sanitize: | $(BUILD_DIR)
 		--input examples/demo_features.csv \
 		--hash-length 3 \
 		> /dev/null
+
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(RESULT_EXPORT_SOURCE) \
+		$(RESULT_EXPORT_TEST) \
+		-o $(RESULT_EXPORT_SANITIZE_BINARY)
+	./$(RESULT_EXPORT_SANITIZE_BINARY)
 
 clean:
 	rm -rf $(BUILD_DIR)

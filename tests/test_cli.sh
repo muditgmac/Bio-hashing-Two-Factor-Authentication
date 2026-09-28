@@ -126,4 +126,111 @@ fi
 grep -Fq "unknown argument" \
     "$TMP_DIR/unknown.err"
 
+# ------------------------------------------------------------
+# Result export must create nested output directories and CSVs
+# ------------------------------------------------------------
+
+EXPORT_DIR="$TMP_DIR/export/nested/results"
+
+"$CLI" \
+    --input examples/demo_features.csv \
+    --hash-length 3 \
+    --output-dir "$EXPORT_DIR" \
+    > "$TMP_DIR/export.out" \
+    2> "$TMP_DIR/export.err"
+
+test -d "$EXPORT_DIR"
+
+test -f "$EXPORT_DIR/summary.csv"
+test -f "$EXPORT_DIR/genuine_scores.csv"
+test -f "$EXPORT_DIR/impostor_scores.csv"
+
+grep -Fq "Results exported to:" \
+    "$TMP_DIR/export.out"
+
+grep -Fq \
+    "input_file,sample_count,feature_count,hash_length" \
+    "$EXPORT_DIR/summary.csv"
+
+grep -Fq \
+    '"examples/demo_features.csv",4,4,3,499,547,12345' \
+    "$EXPORT_DIR/summary.csv"
+
+head -n 1 "$EXPORT_DIR/genuine_scores.csv" |
+    grep -Fqx "comparison_index,distance"
+
+head -n 1 "$EXPORT_DIR/impostor_scores.csv" |
+    grep -Fqx "comparison_index,distance"
+
+GENUINE_LINES=$(
+    wc -l < "$EXPORT_DIR/genuine_scores.csv" |
+    tr -d '[:space:]'
+)
+
+IMPOSTOR_LINES=$(
+    wc -l < "$EXPORT_DIR/impostor_scores.csv" |
+    tr -d '[:space:]'
+)
+
+SUMMARY_LINES=$(
+    wc -l < "$EXPORT_DIR/summary.csv" |
+    tr -d '[:space:]'
+)
+
+test "$GENUINE_LINES" -eq 3
+test "$IMPOSTOR_LINES" -eq 5
+test "$SUMMARY_LINES" -eq 2
+
+grep -Fqx "0,0" \
+    "$EXPORT_DIR/genuine_scores.csv"
+
+grep -Fqx "1,0" \
+    "$EXPORT_DIR/genuine_scores.csv"
+
+grep -Fqx "0,1" \
+    "$EXPORT_DIR/impostor_scores.csv"
+
+grep -Fqx "3,1" \
+    "$EXPORT_DIR/impostor_scores.csv"
+
+# ------------------------------------------------------------
+# --output-dir without a value must fail
+# ------------------------------------------------------------
+
+if "$CLI" \
+    --input examples/demo_features.csv \
+    --hash-length 3 \
+    --output-dir \
+    > "$TMP_DIR/missing-output-dir.out" \
+    2> "$TMP_DIR/missing-output-dir.err"
+then
+    echo "Expected missing --output-dir value to fail." >&2
+    exit 1
+fi
+
+grep -Fq \
+    -- "--output-dir requires a directory path" \
+    "$TMP_DIR/missing-output-dir.err"
+
+# ------------------------------------------------------------
+# A file cannot be used as an output directory
+# ------------------------------------------------------------
+
+touch "$TMP_DIR/not-a-directory"
+
+if "$CLI" \
+    --input examples/demo_features.csv \
+    --hash-length 3 \
+    --output-dir "$TMP_DIR/not-a-directory/child" \
+    > "$TMP_DIR/bad-output-dir.out" \
+    2> "$TMP_DIR/bad-output-dir.err"
+then
+    echo "Expected invalid output directory to fail." >&2
+    exit 1
+fi
+
+grep -Fq \
+    "unable to create output directory" \
+    "$TMP_DIR/bad-output-dir.err"
+
 echo "All BioHash CLI integration tests passed."

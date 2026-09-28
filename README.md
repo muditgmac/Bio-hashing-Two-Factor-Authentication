@@ -84,6 +84,7 @@ The modernized implementation provides:
 - FMR and FNMR calculation;
 - equal-error-rate operating-point estimation;
 - end-to-end genuine and impostor verification experiments;
+- optional CSV export of experiment summaries and score distributions;
 - template revocability / renewability analysis;
 - cross-token mated and non-mated score generation;
 - quantitative local and global unlinkability evaluation;
@@ -103,6 +104,7 @@ The modernized implementation provides:
     │   ├── experiment.h
     │   ├── gram_schmidt.h
     │   ├── matcher.h
+    │   ├── result_export.h
     │   ├── revocability.h
     │   ├── unlinkability.h
     │   └── unlinkability_metric.h
@@ -115,6 +117,7 @@ The modernized implementation provides:
     │   ├── experiment.c
     │   ├── gram_schmidt.c
     │   ├── matcher.c
+    │   ├── result_export.c
     │   ├── revocability.c
     │   ├── unlinkability.c
     │   └── unlinkability_metric.c
@@ -318,6 +321,37 @@ Token parameters can also be supplied explicitly:
         --seed 12345 \
         --threshold 0.0 \
         --tolerance 1e-12
+
+### Exporting experiment results
+
+Verification results can optionally be exported as CSV files by
+supplying an output directory:
+
+    ./build/biohash-evaluate \
+        --input examples/demo_features.csv \
+        --hash-length 3 \
+        --output-dir evaluation/results/demo
+
+The output directory is created when necessary. Three files are
+written:
+
+    evaluation/results/demo/
+    ├── summary.csv
+    ├── genuine_scores.csv
+    └── impostor_scores.csv
+
+`summary.csv` contains the experiment configuration, dataset
+dimensions, comparison counts, mean normalized Hamming distances, and
+the estimated EER operating point.
+
+`genuine_scores.csv` contains the individual normalized Hamming
+distances for same-identity comparisons.
+
+`impostor_scores.csv` contains the individual normalized Hamming
+distances for different-identity comparisons.
+
+Generated files under `evaluation/results/` are ignored by Git so
+experiment output does not need to be committed.
 
 Display all supported options with:
 

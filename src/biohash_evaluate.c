@@ -1,6 +1,7 @@
 #include "biohash.h"
 #include "dataset.h"
 #include "experiment.h"
+#include "result_export.h"
 
 #include <errno.h>
 #include <inttypes.h>
@@ -10,6 +11,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 static void print_usage(
     FILE *stream,
@@ -31,6 +34,9 @@ static void print_usage(
         "  --seed N              BBS seed (default: 12345)\n"
         "  --threshold X         Quantization threshold (default: 0.0)\n"
         "  --tolerance X         Orthogonality tolerance (default: 1e-12)\n"
+        "\n"
+        "Result export:\n"
+        "  --output-dir DIR     Export summary and score CSV files\n"
         "\n"
         "Other options:\n"
         "  --help                Show this help message\n",
@@ -153,6 +159,206 @@ static int parse_double_value(
     return 1;
 }
 
+static int path_is_directory(
+    const char *path
+)
+{
+    struct stat information;
+
+    if (
+        path == NULL ||
+        stat(path, &information) != 0
+    ) {
+        return 0;
+    }
+
+    return S_ISDIR(information.st_mode) ? 1 : 0;
+}
+
+static int create_directory_if_needed(
+    const char *path
+)
+{
+    if (
+        path == NULL ||
+        *path == '\0'
+    ) {
+        return 0;
+    }
+
+    if (mkdir(path, 0777) == 0) {
+        return 1;
+    }
+
+    if (
+        errno == EEXIST &&
+        path_is_directory(path)
+    ) {
+        return 1;
+    }
+
+    return 0;
+}
+
+static int ensure_directory_tree(
+    const char *path
+)
+{
+    if (
+        path == NULL ||
+        *path == '\0'
+    ) {
+        return 0;
+    }
+
+    size_t length = strlen(path);
+
+    if (length == SIZE_MAX) {
+        return 0;
+    }
+
+    char *copy = malloc(length + 1U);
+
+    if (copy == NULL) {
+        return 0;
+    }
+
+    memcpy(
+        copy,
+        path,
+        length + 1U
+    );
+
+    while (
+        length > 1U &&
+        copy[length - 1U] == '/'
+    ) {
+        copy[length - 1U] = '\0';
+        --length;
+    }
+
+    for (size_t index = 1U; index < length; ++index) {
+        if (copy[index] != '/') {
+            continue;
+        }
+
+        copy[index] = '\0';
+
+        if (
+            copy[0] != '\0' &&
+            !create_directory_if_needed(copy)
+        ) {
+            free(copy);
+            return 0;
+        }
+
+        copy[index] = '/';
+    }
+
+    const int success =
+        create_directory_if_needed(copy);
+
+    free(copy);
+
+    return success;
+}
+
+static char *build_output_path(
+    const char *directory,
+    const char *filename
+)
+{
+    if (
+        directory == NULL ||
+        filename == NULL ||
+        *directory == '\0' ||
+        *filename == '\0'
+    ) {
+        return NULL;
+    }
+
+    const size_t directory_length =
+        strlen(directory);
+
+    const size_t filename_length =
+        strlen(filename);
+
+    const int needs_separator =
+        directory[directory_length - 1U] != '/';
+
+    const size_t separator_length =
+        needs_separator ? 1U : 0U;
+
+    if (
+        directory_length >
+        SIZE_MAX -
+            filename_length -
+            separator_length -
+            1U
+    ) {
+        return NULL;
+    }
+
+    const size_t total_length =
+        directory_length +
+        separator_length +
+        filename_length;
+
+    char *output_path =
+        malloc(total_length + 1U);
+
+    if (output_path == NULL) {
+        return NULL;
+    }
+
+    size_t offset = 0U;
+
+    memcpy(
+        output_path,
+        directory,
+        directory_length
+    );
+
+    offset += directory_length;
+
+    if (needs_separator) {
+        output_path[offset] = '/';
+        ++offset;
+    }
+
+    memcpy(
+        output_path + offset,
+        filename,
+        filename_length
+    );
+
+    offset += filename_length;
+    output_path[offset] = '\0';
+
+    return output_path;
+}
+
+static const char *result_export_status_string(
+    ResultExportStatus status
+)
+{
+    switch (status) {
+        case RESULT_EXPORT_OK:
+            return "success";
+
+        case RESULT_EXPORT_INVALID_ARGUMENT:
+            return "invalid export argument";
+
+        case RESULT_EXPORT_INVALID_DATA:
+            return "invalid verification result data";
+
+        case RESULT_EXPORT_IO_ERROR:
+            return "I/O error";
+    }
+
+    return "unknown result-export error";
+}
+
 static const char *dataset_status_string(
     DatasetStatus status
 )
@@ -219,6 +425,7 @@ int main(
 )
 {
     const char *input_path = NULL;
+    const char *output_dir = NULL;
 
     size_t hash_length = 0U;
     int hash_length_was_set = 0;
@@ -264,6 +471,30 @@ int main(
 
             ++index;
             input_path = argv[index];
+
+            continue;
+        }
+
+        if (
+            strcmp(
+                argv[index],
+                "--output-dir"
+            ) == 0
+        ) {
+            if (
+                index + 1 >= argc ||
+                argv[index + 1][0] == '\0'
+            ) {
+                fprintf(
+                    stderr,
+                    "Error: --output-dir requires a directory path.\n"
+                );
+
+                return EXIT_FAILURE;
+            }
+
+            ++index;
+            output_dir = argv[index];
 
             continue;
         }
@@ -489,7 +720,7 @@ int main(
         return EXIT_FAILURE;
     }
 
-    VerificationExperimentResult result;
+    VerificationExperimentResult result = {0};
 
     const ExperimentStatus experiment_status =
         run_verification_experiment(
@@ -569,6 +800,111 @@ int main(
         result.equal_error_rate.eer
     );
 
+    if (output_dir != NULL) {
+        if (!ensure_directory_tree(output_dir)) {
+            fprintf(
+                stderr,
+                "Error: unable to create output directory '%s'.\n",
+                output_dir
+            );
+
+            verification_experiment_result_free(&result);
+            dataset_free(&dataset);
+
+            return EXIT_FAILURE;
+        }
+
+        char *summary_path =
+            build_output_path(
+                output_dir,
+                "summary.csv"
+            );
+
+        char *genuine_scores_path =
+            build_output_path(
+                output_dir,
+                "genuine_scores.csv"
+            );
+
+        char *impostor_scores_path =
+            build_output_path(
+                output_dir,
+                "impostor_scores.csv"
+            );
+
+        if (
+            summary_path == NULL ||
+            genuine_scores_path == NULL ||
+            impostor_scores_path == NULL
+        ) {
+            fprintf(
+                stderr,
+                "Error: unable to allocate result-export paths.\n"
+            );
+
+            free(summary_path);
+            free(genuine_scores_path);
+            free(impostor_scores_path);
+
+            verification_experiment_result_free(&result);
+            dataset_free(&dataset);
+
+            return EXIT_FAILURE;
+        }
+
+        const VerificationExportMetadata metadata = {
+            .input_path = input_path,
+            .feature_count = dataset.feature_count,
+            .hash_length = hash_length,
+            .biohash_config = config
+        };
+
+        const ResultExportStatus export_status =
+            export_verification_result_csv(
+                &metadata,
+                &result,
+                summary_path,
+                genuine_scores_path,
+                impostor_scores_path
+            );
+
+        if (export_status != RESULT_EXPORT_OK) {
+            fprintf(
+                stderr,
+                "Error exporting verification results: %s.\n",
+                result_export_status_string(
+                    export_status
+                )
+            );
+
+            free(summary_path);
+            free(genuine_scores_path);
+            free(impostor_scores_path);
+
+            verification_experiment_result_free(&result);
+            dataset_free(&dataset);
+
+            return EXIT_FAILURE;
+        }
+
+        printf(
+            "Results exported to:          %s\n"
+            "  summary:                    %s\n"
+            "  genuine scores:             %s\n"
+            "  impostor scores:            %s\n"
+            "\n",
+            output_dir,
+            summary_path,
+            genuine_scores_path,
+            impostor_scores_path
+        );
+
+        free(summary_path);
+        free(genuine_scores_path);
+        free(impostor_scores_path);
+    }
+
+    verification_experiment_result_free(&result);
     dataset_free(&dataset);
 
     return EXIT_SUCCESS;
