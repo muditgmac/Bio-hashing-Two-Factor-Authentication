@@ -23,6 +23,30 @@ static int normalized_value_is_valid(
         value <= 1.0;
 }
 
+static int preprocessing_mode_is_valid(
+    ExperimentPreprocessingMode mode
+)
+{
+    return
+        mode == EXPERIMENT_PREPROCESSING_NONE ||
+        mode == EXPERIMENT_PREPROCESSING_SAMPLE_CENTER;
+}
+
+static const char *preprocessing_mode_string(
+    ExperimentPreprocessingMode mode
+)
+{
+    switch (mode) {
+        case EXPERIMENT_PREPROCESSING_NONE:
+            return "none";
+
+        case EXPERIMENT_PREPROCESSING_SAMPLE_CENTER:
+            return "sample-center";
+    }
+
+    return NULL;
+}
+
 static int metadata_is_valid(
     const VerificationExportMetadata *metadata
 )
@@ -33,7 +57,10 @@ static int metadata_is_valid(
         metadata->input_path[0] == '\0' ||
         metadata->feature_count == 0U ||
         metadata->hash_length == 0U ||
-        metadata->hash_length > metadata->feature_count
+        metadata->hash_length > metadata->feature_count ||
+        !preprocessing_mode_is_valid(
+            metadata->preprocessing_mode
+        )
     ) {
         return 0;
     }
@@ -171,6 +198,7 @@ static ResultExportStatus write_summary_csv(
             "sample_count,"
             "feature_count,"
             "hash_length,"
+            "preprocessing,"
             "bbs_p,"
             "bbs_q,"
             "bbs_seed,"
@@ -200,6 +228,7 @@ static ResultExportStatus write_summary_csv(
         fprintf(
             stream,
             ",%zu,%zu,%zu,"
+            "%s,"
             "%" PRIu64 ","
             "%" PRIu64 ","
             "%" PRIu64 ","
@@ -210,6 +239,9 @@ static ResultExportStatus write_summary_csv(
             result->sample_count,
             metadata->feature_count,
             metadata->hash_length,
+            preprocessing_mode_string(
+                metadata->preprocessing_mode
+            ),
             metadata->biohash_config.p,
             metadata->biohash_config.q,
             metadata->biohash_config.seed,

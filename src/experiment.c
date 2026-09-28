@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "matcher.h"
+#include "preprocessing.h"
 
 static int checked_product(
     size_t first,
@@ -91,12 +92,13 @@ void verification_experiment_result_free(
     *result = (VerificationExperimentResult){0};
 }
 
-ExperimentStatus run_verification_experiment(
+ExperimentStatus run_verification_experiment_with_preprocessing(
     const double *feature_matrix,
     const size_t *subject_ids,
     size_t sample_count,
     size_t feature_count,
     size_t hash_length,
+    ExperimentPreprocessingMode preprocessing_mode,
     const BioHashConfig *config,
     VerificationExperimentResult *result
 )
@@ -109,7 +111,11 @@ ExperimentStatus run_verification_experiment(
         sample_count < 2U ||
         feature_count == 0U ||
         hash_length == 0U ||
-        hash_length > feature_count
+        hash_length > feature_count ||
+        (
+            preprocessing_mode != EXPERIMENT_PREPROCESSING_NONE &&
+            preprocessing_mode != EXPERIMENT_PREPROCESSING_SAMPLE_CENTER
+        )
     ) {
         return EXPERIMENT_INVALID_ARGUMENT;
     }
@@ -132,12 +138,48 @@ ExperimentStatus run_verification_experiment(
         return EXPERIMENT_INVALID_ARGUMENT;
     }
 
-    /*
-     * feature_element_count is intentionally calculated as part of
-     * overflow validation even though indexing below uses sample
-     * offsets rather than this total directly.
-     */
-    (void)feature_element_count;
+    const double *experiment_features =
+        feature_matrix;
+
+    double *preprocessed_features = NULL;
+
+    if (
+        preprocessing_mode ==
+        EXPERIMENT_PREPROCESSING_SAMPLE_CENTER
+    ) {
+        if (
+            feature_element_count >
+            SIZE_MAX / sizeof(*preprocessed_features)
+        ) {
+            return EXPERIMENT_INVALID_ARGUMENT;
+        }
+
+        preprocessed_features =
+            malloc(
+                feature_element_count *
+                sizeof(*preprocessed_features)
+            );
+
+        if (preprocessed_features == NULL) {
+            return EXPERIMENT_ALLOCATION_FAILURE;
+        }
+
+        const PreprocessingStatus preprocessing_status =
+            sample_center_features(
+                feature_matrix,
+                sample_count,
+                feature_count,
+                preprocessed_features
+            );
+
+        if (preprocessing_status != PREPROCESSING_OK) {
+            free(preprocessed_features);
+            return EXPERIMENT_PREPROCESSING_FAILURE;
+        }
+
+        experiment_features =
+            preprocessed_features;
+    }
 
     size_t genuine_count = 0U;
     size_t impostor_count = 0U;
@@ -151,6 +193,7 @@ ExperimentStatus run_verification_experiment(
         );
 
     if (count_status != EXPERIMENT_OK) {
+        free(preprocessed_features);
         return count_status;
     }
 
@@ -171,13 +214,16 @@ ExperimentStatus run_verification_experiment(
         free(templates);
         free(genuine_scores);
         free(impostor_scores);
+        free(preprocessed_features);
 
         return EXPERIMENT_ALLOCATION_FAILURE;
     }
 
     for (size_t sample = 0U; sample < sample_count; ++sample) {
         const double *features =
-            &feature_matrix[sample * feature_count];
+            &experiment_features[
+                sample * feature_count
+            ];
 
         uint8_t *biohash =
             &templates[sample * hash_length];
@@ -195,6 +241,7 @@ ExperimentStatus run_verification_experiment(
             free(templates);
             free(genuine_scores);
             free(impostor_scores);
+            free(preprocessed_features);
 
             return EXPERIMENT_BIOHASH_FAILURE;
         }
@@ -232,6 +279,7 @@ ExperimentStatus run_verification_experiment(
                 free(templates);
                 free(genuine_scores);
                 free(impostor_scores);
+                free(preprocessed_features);
 
                 return EXPERIMENT_MATCHER_FAILURE;
             }
@@ -263,6 +311,7 @@ ExperimentStatus run_verification_experiment(
         free(templates);
         free(genuine_scores);
         free(impostor_scores);
+        free(preprocessed_features);
 
         return EXPERIMENT_EVALUATION_FAILURE;
     }
@@ -287,6 +336,29 @@ ExperimentStatus run_verification_experiment(
      * Only temporary template storage is released here.
      */
     free(templates);
+    free(preprocessed_features);
 
     return EXPERIMENT_OK;
+}
+
+ExperimentStatus run_verification_experiment(
+    const double *feature_matrix,
+    const size_t *subject_ids,
+    size_t sample_count,
+    size_t feature_count,
+    size_t hash_length,
+    const BioHashConfig *config,
+    VerificationExperimentResult *result
+)
+{
+    return run_verification_experiment_with_preprocessing(
+        feature_matrix,
+        subject_ids,
+        sample_count,
+        feature_count,
+        hash_length,
+        EXPERIMENT_PREPROCESSING_NONE,
+        config,
+        result
+    );
 }

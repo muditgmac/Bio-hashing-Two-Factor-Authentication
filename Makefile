@@ -176,6 +176,7 @@ $(EXPERIMENT_TEST_BINARY): \
 	$(BIOHASH_SOURCE) \
 	$(MATCHER_SOURCE) \
 	$(EVALUATION_SOURCE) \
+	$(PREPROCESSING_SOURCE) \
 	$(EXPERIMENT_SOURCE) \
 	$(EXPERIMENT_TEST) \
 	include/bbs.h \
@@ -184,6 +185,7 @@ $(EXPERIMENT_TEST_BINARY): \
 	include/biohash.h \
 	include/matcher.h \
 	include/evaluation.h \
+	include/preprocessing.h \
 	include/experiment.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) \
 		$(BBS_SOURCE) \
@@ -192,7 +194,8 @@ $(EXPERIMENT_TEST_BINARY): \
 		$(BIOHASH_SOURCE) \
 		$(MATCHER_SOURCE) \
 		$(EVALUATION_SOURCE) \
-		$(EXPERIMENT_SOURCE) \
+		$(PREPROCESSING_SOURCE) \
+	$(EXPERIMENT_SOURCE) \
 		$(EXPERIMENT_TEST) \
 		-lm \
 		-o $(EXPERIMENT_TEST_BINARY)
@@ -337,6 +340,7 @@ $(CLI_BINARY): \
 	$(MATCHER_SOURCE) \
 	$(EVALUATION_SOURCE) \
 	$(ERROR_RATE_SWEEP_SOURCE) \
+	$(PREPROCESSING_SOURCE) \
 	$(EXPERIMENT_SOURCE) \
 	$(DATASET_SOURCE) \
 	$(RESULT_EXPORT_SOURCE) \
@@ -348,6 +352,7 @@ $(CLI_BINARY): \
 	include/matcher.h \
 	include/evaluation.h \
 	include/error_rate_sweep.h \
+	include/preprocessing.h \
 	include/experiment.h \
 	include/dataset.h \
 	include/result_export.h | $(BUILD_DIR)
@@ -359,7 +364,8 @@ $(CLI_BINARY): \
 		$(MATCHER_SOURCE) \
 		$(EVALUATION_SOURCE) \
 		$(ERROR_RATE_SWEEP_SOURCE) \
-		$(EXPERIMENT_SOURCE) \
+		$(PREPROCESSING_SOURCE) \
+	$(EXPERIMENT_SOURCE) \
 		$(DATASET_SOURCE) \
 		$(RESULT_EXPORT_SOURCE) \
 		$(CLI_SOURCE) \
@@ -437,6 +443,7 @@ test-sanitize: | $(BUILD_DIR)
 		$(BIOHASH_SOURCE) \
 		$(MATCHER_SOURCE) \
 		$(EVALUATION_SOURCE) \
+		$(PREPROCESSING_SOURCE) \
 		$(EXPERIMENT_SOURCE) \
 		$(EXPERIMENT_TEST) \
 		-lm \
@@ -503,6 +510,7 @@ test-sanitize: | $(BUILD_DIR)
 		$(MATCHER_SOURCE) \
 		$(EVALUATION_SOURCE) \
 		$(ERROR_RATE_SWEEP_SOURCE) \
+		$(PREPROCESSING_SOURCE) \
 		$(EXPERIMENT_SOURCE) \
 		$(DATASET_SOURCE) \
 		$(RESULT_EXPORT_SOURCE) \

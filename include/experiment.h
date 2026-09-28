@@ -10,11 +10,17 @@ typedef enum {
     EXPERIMENT_OK = 0,
     EXPERIMENT_INVALID_ARGUMENT,
     EXPERIMENT_ALLOCATION_FAILURE,
+    EXPERIMENT_PREPROCESSING_FAILURE,
     EXPERIMENT_BIOHASH_FAILURE,
     EXPERIMENT_MATCHER_FAILURE,
     EXPERIMENT_EVALUATION_FAILURE,
     EXPERIMENT_INSUFFICIENT_COMPARISONS
 } ExperimentStatus;
+
+typedef enum {
+    EXPERIMENT_PREPROCESSING_NONE = 0,
+    EXPERIMENT_PREPROCESSING_SAMPLE_CENTER
+} ExperimentPreprocessingMode;
 
 typedef struct {
     size_t sample_count;
@@ -66,6 +72,32 @@ void verification_experiment_result_free(
  *
  * The resulting genuine and impostor score distributions are then used
  * to estimate the equal-error operating point.
+ */
+/*
+ * Run the verification experiment with an explicit preprocessing mode.
+ *
+ * EXPERIMENT_PREPROCESSING_NONE:
+ *     Use the input feature matrix without preprocessing.
+ *
+ * EXPERIMENT_PREPROCESSING_SAMPLE_CENTER:
+ *     Subtract each sample's own feature mean before BioHash generation.
+ */
+ExperimentStatus run_verification_experiment_with_preprocessing(
+    const double *feature_matrix,
+    const size_t *subject_ids,
+    size_t sample_count,
+    size_t feature_count,
+    size_t hash_length,
+    ExperimentPreprocessingMode preprocessing_mode,
+    const BioHashConfig *config,
+    VerificationExperimentResult *result
+);
+
+/*
+ * Backward-compatible entry point.
+ *
+ * Equivalent to run_verification_experiment_with_preprocessing()
+ * with EXPERIMENT_PREPROCESSING_NONE.
  */
 ExperimentStatus run_verification_experiment(
     const double *feature_matrix,

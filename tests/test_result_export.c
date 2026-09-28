@@ -22,6 +22,8 @@ static VerificationExportMetadata test_metadata(void)
         .input_path = "examples/demo,\"quoted\".csv",
         .feature_count = 4U,
         .hash_length = 3U,
+        .preprocessing_mode =
+            EXPERIMENT_PREPROCESSING_SAMPLE_CENTER,
         .biohash_config = {
             .p = 499U,
             .q = 547U,
@@ -143,6 +145,7 @@ static void test_export_writes_expected_files(void)
         strstr(
             summary,
             "input_file,sample_count,feature_count,"
+            "hash_length,preprocessing,"
         ) != NULL
     );
 
@@ -159,7 +162,7 @@ static void test_export_writes_expected_files(void)
     assert(
         strstr(
             summary,
-            ",4,4,3,499,547,12345,"
+            ",4,4,3,sample-center,499,547,12345,"
         ) != NULL
     );
 
@@ -355,6 +358,43 @@ static void test_invalid_arguments_are_rejected(void)
     );
 }
 
+static void test_invalid_preprocessing_mode_is_rejected(void)
+{
+    double genuine_scores[2U] = {
+        0.0,
+        0.25
+    };
+
+    double impostor_scores[4U] = {
+        0.5,
+        0.75,
+        0.75,
+        1.0
+    };
+
+    VerificationExportMetadata invalid_metadata =
+        test_metadata();
+
+    invalid_metadata.preprocessing_mode =
+        (ExperimentPreprocessingMode)999;
+
+    const VerificationExperimentResult result =
+        test_result(
+            genuine_scores,
+            impostor_scores
+        );
+
+    assert(
+        export_verification_result_csv(
+            &invalid_metadata,
+            &result,
+            SUMMARY_PATH,
+            GENUINE_PATH,
+            IMPOSTOR_PATH
+        ) == RESULT_EXPORT_INVALID_ARGUMENT
+    );
+}
+
 static void test_invalid_score_data_is_rejected(void)
 {
     double genuine_scores[2U] = {
@@ -428,6 +468,7 @@ int main(void)
     test_export_writes_expected_files();
     test_error_rate_sweep_export();
     test_invalid_arguments_are_rejected();
+    test_invalid_preprocessing_mode_is_rejected();
     test_invalid_score_data_is_rejected();
     test_io_failure_is_reported();
 
