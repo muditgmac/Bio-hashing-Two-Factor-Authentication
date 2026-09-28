@@ -44,6 +44,11 @@ EVALUATION_TEST := tests/test_evaluation.c
 EVALUATION_TEST_BINARY := $(BUILD_DIR)/test_evaluation
 EVALUATION_SANITIZE_BINARY := $(BUILD_DIR)/test_evaluation_sanitize
 
+ERROR_RATE_SWEEP_SOURCE := src/error_rate_sweep.c
+ERROR_RATE_SWEEP_TEST := tests/test_error_rate_sweep.c
+ERROR_RATE_SWEEP_TEST_BINARY := $(BUILD_DIR)/test_error_rate_sweep
+ERROR_RATE_SWEEP_SANITIZE_BINARY := $(BUILD_DIR)/test_error_rate_sweep_sanitize
+
 EXPERIMENT_SOURCE := src/experiment.c
 EXPERIMENT_TEST := tests/test_experiment.c
 EXPERIMENT_TEST_BINARY := $(BUILD_DIR)/test_experiment
@@ -84,7 +89,7 @@ RESULT_EXPORT_TEST := tests/test_result_export.c
 RESULT_EXPORT_TEST_BINARY := $(BUILD_DIR)/test_result_export
 RESULT_EXPORT_SANITIZE_BINARY := $(BUILD_DIR)/test_result_export_sanitize
 
-.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-dataset test-cli cli test-sanitize clean test-result-export
+.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-error-rate-sweep test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-dataset test-cli cli test-sanitize clean test-result-export
 
 all: test
 
@@ -142,6 +147,22 @@ $(EVALUATION_TEST_BINARY): $(EVALUATION_SOURCE) $(EVALUATION_TEST) include/evalu
 
 test-evaluation: $(EVALUATION_TEST_BINARY)
 	./$(EVALUATION_TEST_BINARY)
+
+$(ERROR_RATE_SWEEP_TEST_BINARY): \
+	$(EVALUATION_SOURCE) \
+	$(ERROR_RATE_SWEEP_SOURCE) \
+	$(ERROR_RATE_SWEEP_TEST) \
+	include/evaluation.h \
+	include/error_rate_sweep.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		$(EVALUATION_SOURCE) \
+		$(ERROR_RATE_SWEEP_SOURCE) \
+		$(ERROR_RATE_SWEEP_TEST) \
+		-lm \
+		-o $(ERROR_RATE_SWEEP_TEST_BINARY)
+
+test-error-rate-sweep: $(ERROR_RATE_SWEEP_TEST_BINARY)
+	./$(ERROR_RATE_SWEEP_TEST_BINARY)
 
 $(EXPERIMENT_TEST_BINARY): \
 	$(BBS_SOURCE) \
@@ -297,6 +318,7 @@ $(CLI_BINARY): \
 	$(BIOHASH_SOURCE) \
 	$(MATCHER_SOURCE) \
 	$(EVALUATION_SOURCE) \
+	$(ERROR_RATE_SWEEP_SOURCE) \
 	$(EXPERIMENT_SOURCE) \
 	$(DATASET_SOURCE) \
 	$(RESULT_EXPORT_SOURCE) \
@@ -307,6 +329,7 @@ $(CLI_BINARY): \
 	include/biohash.h \
 	include/matcher.h \
 	include/evaluation.h \
+	include/error_rate_sweep.h \
 	include/experiment.h \
 	include/dataset.h \
 	include/result_export.h | $(BUILD_DIR)
@@ -317,6 +340,7 @@ $(CLI_BINARY): \
 		$(BIOHASH_SOURCE) \
 		$(MATCHER_SOURCE) \
 		$(EVALUATION_SOURCE) \
+		$(ERROR_RATE_SWEEP_SOURCE) \
 		$(EXPERIMENT_SOURCE) \
 		$(DATASET_SOURCE) \
 		$(RESULT_EXPORT_SOURCE) \
@@ -329,12 +353,13 @@ cli: $(CLI_BINARY)
 test-cli: $(CLI_BINARY) $(CLI_TEST) examples/demo_features.csv
 	sh $(CLI_TEST) $(CLI_BINARY)
 
-test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-dataset test-cli test-result-export
+test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-error-rate-sweep test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-dataset test-cli test-result-export
 
 $(RESULT_EXPORT_TEST_BINARY): \
 	$(RESULT_EXPORT_SOURCE) \
 	$(RESULT_EXPORT_TEST) \
 	include/result_export.h \
+	include/error_rate_sweep.h \
 	include/experiment.h \
 	include/evaluation.h \
 	include/biohash.h | $(BUILD_DIR)
@@ -380,6 +405,13 @@ test-sanitize: | $(BUILD_DIR)
 		-lm \
 		-o $(EVALUATION_SANITIZE_BINARY)
 	./$(EVALUATION_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(EVALUATION_SOURCE) \
+		$(ERROR_RATE_SWEEP_SOURCE) \
+		$(ERROR_RATE_SWEEP_TEST) \
+		-lm \
+		-o $(ERROR_RATE_SWEEP_SANITIZE_BINARY)
+	./$(ERROR_RATE_SWEEP_SANITIZE_BINARY)
 	$(CC) $(CFLAGS) $(SANITIZERS) -g \
 		$(BBS_SOURCE) \
 		$(GRAM_SCHMIDT_SOURCE) \
@@ -446,6 +478,7 @@ test-sanitize: | $(BUILD_DIR)
 		$(BIOHASH_SOURCE) \
 		$(MATCHER_SOURCE) \
 		$(EVALUATION_SOURCE) \
+		$(ERROR_RATE_SWEEP_SOURCE) \
 		$(EXPERIMENT_SOURCE) \
 		$(DATASET_SOURCE) \
 		$(RESULT_EXPORT_SOURCE) \
@@ -455,6 +488,7 @@ test-sanitize: | $(BUILD_DIR)
 	./$(CLI_SANITIZE_BINARY) \
 		--input examples/demo_features.csv \
 		--hash-length 3 \
+		--output-dir build/sanitize-cli-export \
 		> /dev/null
 
 	$(CC) $(CFLAGS) $(SANITIZERS) -g \

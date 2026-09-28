@@ -13,6 +13,9 @@
 #define IMPOSTOR_PATH \
     "build/test_result_export_impostor.csv"
 
+#define ERROR_RATES_PATH \
+    "build/test_result_export_error_rates.csv"
+
 static VerificationExportMetadata test_metadata(void)
 {
     VerificationExportMetadata metadata = {
@@ -90,6 +93,7 @@ static void remove_test_files(void)
     (void)remove(SUMMARY_PATH);
     (void)remove(GENUINE_PATH);
     (void)remove(IMPOSTOR_PATH);
+    (void)remove(ERROR_RATES_PATH);
 }
 
 static void test_export_writes_expected_files(void)
@@ -203,6 +207,98 @@ static void test_export_writes_expected_files(void)
     );
 
     remove_test_files();
+}
+
+
+static void test_error_rate_sweep_export(void)
+{
+    ErrorRates points[4U] = {
+        {
+            .threshold = 0.0,
+            .fmr = 1.0,
+            .fnmr = 0.0
+        },
+        {
+            .threshold = 0.25,
+            .fmr = 0.5,
+            .fnmr = 0.25
+        },
+        {
+            .threshold = 0.5,
+            .fmr = 0.25,
+            .fnmr = 0.5
+        },
+        {
+            .threshold = 1.0,
+            .fmr = 0.0,
+            .fnmr = 1.0
+        }
+    };
+
+    ErrorRateSweepResult sweep = {
+        .point_count = 4U,
+        .points = points
+    };
+
+    (void)remove(ERROR_RATES_PATH);
+
+    assert(
+        export_error_rate_sweep_csv(
+            &sweep,
+            ERROR_RATES_PATH
+        ) == RESULT_EXPORT_OK
+    );
+
+    char contents[1024U];
+
+    read_file_text(
+        ERROR_RATES_PATH,
+        contents,
+        sizeof(contents)
+    );
+
+    assert(
+        strcmp(
+            contents,
+            "threshold,fmr,fnmr\n"
+            "0,1,0\n"
+            "0.25,0.5,0.25\n"
+            "0.5,0.25,0.5\n"
+            "1,0,1\n"
+        ) == 0
+    );
+
+    assert(
+        export_error_rate_sweep_csv(
+            NULL,
+            ERROR_RATES_PATH
+        ) == RESULT_EXPORT_INVALID_DATA
+    );
+
+    assert(
+        export_error_rate_sweep_csv(
+            &sweep,
+            NULL
+        ) == RESULT_EXPORT_INVALID_ARGUMENT
+    );
+
+    assert(
+        export_error_rate_sweep_csv(
+            &sweep,
+            ""
+        ) == RESULT_EXPORT_INVALID_ARGUMENT
+    );
+
+    points[2].fmr = 1.25;
+
+    assert(
+        export_error_rate_sweep_csv(
+            &sweep,
+            ERROR_RATES_PATH
+        ) == RESULT_EXPORT_INVALID_DATA
+    );
+
+    (void)remove(ERROR_RATES_PATH);
 }
 
 static void test_invalid_arguments_are_rejected(void)
@@ -330,6 +426,7 @@ static void test_io_failure_is_reported(void)
 int main(void)
 {
     test_export_writes_expected_files();
+    test_error_rate_sweep_export();
     test_invalid_arguments_are_rejected();
     test_invalid_score_data_is_rejected();
     test_io_failure_is_reported();

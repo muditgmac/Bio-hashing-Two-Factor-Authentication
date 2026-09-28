@@ -5,6 +5,7 @@
 
 #include "biohash.h"
 #include "experiment.h"
+#include "error_rate_sweep.h"
 
 typedef enum {
     RESULT_EXPORT_OK = 0,
@@ -47,6 +48,22 @@ ResultExportStatus export_verification_result_csv(
     const char *summary_path,
     const char *genuine_scores_path,
     const char *impostor_scores_path
+);
+
+
+/*
+ * Export an evaluated error-rate operating-point sweep to CSV.
+ *
+ * The output contains one row for every evaluated decision
+ * threshold, with columns:
+ *
+ *     threshold,fmr,fnmr
+ *
+ * The caller must ensure that the parent directory already exists.
+ */
+ResultExportStatus export_error_rate_sweep_csv(
+    const ErrorRateSweepResult *sweep,
+    const char *error_rates_path
 );
 
 #endif

@@ -339,3 +339,104 @@ ResultExportStatus export_verification_result_csv(
 
     return RESULT_EXPORT_OK;
 }
+
+
+static int error_rate_sweep_is_valid(
+    const ErrorRateSweepResult *sweep
+)
+{
+    if (
+        sweep == NULL ||
+        sweep->point_count == 0U ||
+        sweep->points == NULL
+    ) {
+        return 0;
+    }
+
+    for (
+        size_t index = 0U;
+        index < sweep->point_count;
+        ++index
+    ) {
+        const ErrorRates *point =
+            &sweep->points[index];
+
+        if (
+            !normalized_value_is_valid(
+                point->threshold
+            ) ||
+            !normalized_value_is_valid(
+                point->fmr
+            ) ||
+            !normalized_value_is_valid(
+                point->fnmr
+            )
+        ) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+ResultExportStatus export_error_rate_sweep_csv(
+    const ErrorRateSweepResult *sweep,
+    const char *error_rates_path
+)
+{
+    if (!path_is_valid(error_rates_path)) {
+        return RESULT_EXPORT_INVALID_ARGUMENT;
+    }
+
+    if (!error_rate_sweep_is_valid(sweep)) {
+        return RESULT_EXPORT_INVALID_DATA;
+    }
+
+    FILE *stream =
+        fopen(
+            error_rates_path,
+            "w"
+        );
+
+    if (stream == NULL) {
+        return RESULT_EXPORT_IO_ERROR;
+    }
+
+    if (
+        fputs(
+            "threshold,fmr,fnmr\n",
+            stream
+        ) == EOF
+    ) {
+        (void)fclose(stream);
+        return RESULT_EXPORT_IO_ERROR;
+    }
+
+    for (
+        size_t index = 0U;
+        index < sweep->point_count;
+        ++index
+    ) {
+        const ErrorRates *point =
+            &sweep->points[index];
+
+        if (
+            fprintf(
+                stream,
+                "%.17g,%.17g,%.17g\n",
+                point->threshold,
+                point->fmr,
+                point->fnmr
+            ) < 0
+        ) {
+            (void)fclose(stream);
+            return RESULT_EXPORT_IO_ERROR;
+        }
+    }
+
+    if (fclose(stream) != 0) {
+        return RESULT_EXPORT_IO_ERROR;
+    }
+
+    return RESULT_EXPORT_OK;
+}
