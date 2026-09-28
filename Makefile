@@ -1,0 +1,236 @@
+CC := clang
+
+CFLAGS := \
+	-std=c11 \
+	-Wall \
+	-Wextra \
+	-Wpedantic \
+	-Wconversion \
+	-Wshadow \
+	-Werror \
+	-Iinclude
+
+SANITIZERS := -fsanitize=address,undefined -fno-omit-frame-pointer
+
+BUILD_DIR := build
+
+BBS_SOURCE := src/bbs.c
+BBS_TEST := tests/test_bbs.c
+BBS_TEST_BINARY := $(BUILD_DIR)/test_bbs
+BBS_SANITIZE_BINARY := $(BUILD_DIR)/test_bbs_sanitize
+
+GRAM_SCHMIDT_SOURCE := src/gram_schmidt.c
+GRAM_SCHMIDT_TEST := tests/test_gram_schmidt.c
+GRAM_SCHMIDT_TEST_BINARY := $(BUILD_DIR)/test_gram_schmidt
+GRAM_SCHMIDT_SANITIZE_BINARY := $(BUILD_DIR)/test_gram_schmidt_sanitize
+
+DCT_SOURCE := src/dct.c
+DCT_TEST := tests/test_dct.c
+DCT_TEST_BINARY := $(BUILD_DIR)/test_dct
+DCT_SANITIZE_BINARY := $(BUILD_DIR)/test_dct_sanitize
+
+BIOHASH_SOURCE := src/biohash.c
+BIOHASH_TEST := tests/test_biohash.c
+BIOHASH_TEST_BINARY := $(BUILD_DIR)/test_biohash
+BIOHASH_SANITIZE_BINARY := $(BUILD_DIR)/test_biohash_sanitize
+
+MATCHER_SOURCE := src/matcher.c
+MATCHER_TEST := tests/test_matcher.c
+MATCHER_TEST_BINARY := $(BUILD_DIR)/test_matcher
+MATCHER_SANITIZE_BINARY := $(BUILD_DIR)/test_matcher_sanitize
+
+EVALUATION_SOURCE := src/evaluation.c
+EVALUATION_TEST := tests/test_evaluation.c
+EVALUATION_TEST_BINARY := $(BUILD_DIR)/test_evaluation
+EVALUATION_SANITIZE_BINARY := $(BUILD_DIR)/test_evaluation_sanitize
+
+EXPERIMENT_SOURCE := src/experiment.c
+EXPERIMENT_TEST := tests/test_experiment.c
+EXPERIMENT_TEST_BINARY := $(BUILD_DIR)/test_experiment
+EXPERIMENT_SANITIZE_BINARY := $(BUILD_DIR)/test_experiment_sanitize
+
+REVOCABILITY_SOURCE := src/revocability.c
+REVOCABILITY_TEST := tests/test_revocability.c
+REVOCABILITY_TEST_BINARY := $(BUILD_DIR)/test_revocability
+REVOCABILITY_SANITIZE_BINARY := $(BUILD_DIR)/test_revocability_sanitize
+
+.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-sanitize clean
+
+all: test
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+$(BBS_TEST_BINARY): $(BBS_SOURCE) $(BBS_TEST) include/bbs.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(BBS_SOURCE) $(BBS_TEST) -o $(BBS_TEST_BINARY)
+
+$(GRAM_SCHMIDT_TEST_BINARY): $(GRAM_SCHMIDT_SOURCE) $(GRAM_SCHMIDT_TEST) include/gram_schmidt.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(GRAM_SCHMIDT_SOURCE) $(GRAM_SCHMIDT_TEST) -lm -o $(GRAM_SCHMIDT_TEST_BINARY)
+
+$(DCT_TEST_BINARY): $(DCT_SOURCE) $(DCT_TEST) include/dct.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(DCT_SOURCE) $(DCT_TEST) -lm -o $(DCT_TEST_BINARY)
+
+$(BIOHASH_TEST_BINARY): \
+	$(BBS_SOURCE) \
+	$(GRAM_SCHMIDT_SOURCE) \
+	$(DCT_SOURCE) \
+	$(BIOHASH_SOURCE) \
+	$(BIOHASH_TEST) \
+	include/bbs.h \
+	include/gram_schmidt.h \
+	include/dct.h \
+	include/biohash.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(BIOHASH_TEST) \
+		-lm \
+		-o $(BIOHASH_TEST_BINARY)
+
+test-bbs: $(BBS_TEST_BINARY)
+	./$(BBS_TEST_BINARY)
+
+test-gram-schmidt: $(GRAM_SCHMIDT_TEST_BINARY)
+	./$(GRAM_SCHMIDT_TEST_BINARY)
+
+test-dct: $(DCT_TEST_BINARY)
+	./$(DCT_TEST_BINARY)
+
+$(MATCHER_TEST_BINARY): $(MATCHER_SOURCE) $(MATCHER_TEST) include/matcher.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(MATCHER_SOURCE) $(MATCHER_TEST) -lm -o $(MATCHER_TEST_BINARY)
+
+test-biohash: $(BIOHASH_TEST_BINARY)
+	./$(BIOHASH_TEST_BINARY)
+
+test-matcher: $(MATCHER_TEST_BINARY)
+	./$(MATCHER_TEST_BINARY)
+
+$(EVALUATION_TEST_BINARY): $(EVALUATION_SOURCE) $(EVALUATION_TEST) include/evaluation.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(EVALUATION_SOURCE) $(EVALUATION_TEST) -lm -o $(EVALUATION_TEST_BINARY)
+
+test-evaluation: $(EVALUATION_TEST_BINARY)
+	./$(EVALUATION_TEST_BINARY)
+
+$(EXPERIMENT_TEST_BINARY): \
+	$(BBS_SOURCE) \
+	$(GRAM_SCHMIDT_SOURCE) \
+	$(DCT_SOURCE) \
+	$(BIOHASH_SOURCE) \
+	$(MATCHER_SOURCE) \
+	$(EVALUATION_SOURCE) \
+	$(EXPERIMENT_SOURCE) \
+	$(EXPERIMENT_TEST) \
+	include/bbs.h \
+	include/gram_schmidt.h \
+	include/dct.h \
+	include/biohash.h \
+	include/matcher.h \
+	include/evaluation.h \
+	include/experiment.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(MATCHER_SOURCE) \
+		$(EVALUATION_SOURCE) \
+		$(EXPERIMENT_SOURCE) \
+		$(EXPERIMENT_TEST) \
+		-lm \
+		-o $(EXPERIMENT_TEST_BINARY)
+
+test-experiment: $(EXPERIMENT_TEST_BINARY)
+	./$(EXPERIMENT_TEST_BINARY)
+
+$(REVOCABILITY_TEST_BINARY): \
+	$(BBS_SOURCE) \
+	$(GRAM_SCHMIDT_SOURCE) \
+	$(DCT_SOURCE) \
+	$(BIOHASH_SOURCE) \
+	$(MATCHER_SOURCE) \
+	$(REVOCABILITY_SOURCE) \
+	$(REVOCABILITY_TEST) \
+	include/bbs.h \
+	include/gram_schmidt.h \
+	include/dct.h \
+	include/biohash.h \
+	include/matcher.h \
+	include/revocability.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(MATCHER_SOURCE) \
+		$(REVOCABILITY_SOURCE) \
+		$(REVOCABILITY_TEST) \
+		-lm \
+		-o $(REVOCABILITY_TEST_BINARY)
+
+test-revocability: $(REVOCABILITY_TEST_BINARY)
+	./$(REVOCABILITY_TEST_BINARY)
+
+test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability
+
+test-sanitize: | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(BBS_SOURCE) $(BBS_TEST) \
+		-o $(BBS_SANITIZE_BINARY)
+	./$(BBS_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(GRAM_SCHMIDT_SOURCE) $(GRAM_SCHMIDT_TEST) \
+		-lm \
+		-o $(GRAM_SCHMIDT_SANITIZE_BINARY)
+	./$(GRAM_SCHMIDT_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(DCT_SOURCE) $(DCT_TEST) \
+		-lm \
+		-o $(DCT_SANITIZE_BINARY)
+	./$(DCT_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(BIOHASH_TEST) \
+		-lm \
+		-o $(BIOHASH_SANITIZE_BINARY)
+	./$(BIOHASH_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(MATCHER_SOURCE) $(MATCHER_TEST) \
+		-lm \
+		-o $(MATCHER_SANITIZE_BINARY)
+	./$(MATCHER_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(EVALUATION_SOURCE) $(EVALUATION_TEST) \
+		-lm \
+		-o $(EVALUATION_SANITIZE_BINARY)
+	./$(EVALUATION_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(MATCHER_SOURCE) \
+		$(EVALUATION_SOURCE) \
+		$(EXPERIMENT_SOURCE) \
+		$(EXPERIMENT_TEST) \
+		-lm \
+		-o $(EXPERIMENT_SANITIZE_BINARY)
+	./$(EXPERIMENT_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(MATCHER_SOURCE) \
+		$(REVOCABILITY_SOURCE) \
+		$(REVOCABILITY_TEST) \
+		-lm \
+		-o $(REVOCABILITY_SANITIZE_BINARY)
+	./$(REVOCABILITY_SANITIZE_BINARY)
+
+clean:
+	rm -rf $(BUILD_DIR)
