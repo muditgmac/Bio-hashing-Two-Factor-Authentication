@@ -29,7 +29,12 @@ DCT_TEST := tests/test_dct.c
 DCT_TEST_BINARY := $(BUILD_DIR)/test_dct
 DCT_SANITIZE_BINARY := $(BUILD_DIR)/test_dct_sanitize
 
-.PHONY: all test test-bbs test-gram-schmidt test-dct test-sanitize clean
+BIOHASH_SOURCE := src/biohash.c
+BIOHASH_TEST := tests/test_biohash.c
+BIOHASH_TEST_BINARY := $(BUILD_DIR)/test_biohash
+BIOHASH_SANITIZE_BINARY := $(BUILD_DIR)/test_biohash_sanitize
+
+.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-sanitize clean
 
 all: test
 
@@ -45,6 +50,25 @@ $(GRAM_SCHMIDT_TEST_BINARY): $(GRAM_SCHMIDT_SOURCE) $(GRAM_SCHMIDT_TEST) include
 $(DCT_TEST_BINARY): $(DCT_SOURCE) $(DCT_TEST) include/dct.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(DCT_SOURCE) $(DCT_TEST) -lm -o $(DCT_TEST_BINARY)
 
+$(BIOHASH_TEST_BINARY): \
+	$(BBS_SOURCE) \
+	$(GRAM_SCHMIDT_SOURCE) \
+	$(DCT_SOURCE) \
+	$(BIOHASH_SOURCE) \
+	$(BIOHASH_TEST) \
+	include/bbs.h \
+	include/gram_schmidt.h \
+	include/dct.h \
+	include/biohash.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(BIOHASH_TEST) \
+		-lm \
+		-o $(BIOHASH_TEST_BINARY)
+
 test-bbs: $(BBS_TEST_BINARY)
 	./$(BBS_TEST_BINARY)
 
@@ -54,7 +78,10 @@ test-gram-schmidt: $(GRAM_SCHMIDT_TEST_BINARY)
 test-dct: $(DCT_TEST_BINARY)
 	./$(DCT_TEST_BINARY)
 
-test: test-bbs test-gram-schmidt test-dct
+test-biohash: $(BIOHASH_TEST_BINARY)
+	./$(BIOHASH_TEST_BINARY)
+
+test: test-bbs test-gram-schmidt test-dct test-biohash
 
 test-sanitize: | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(SANITIZERS) -g \
@@ -71,6 +98,15 @@ test-sanitize: | $(BUILD_DIR)
 		-lm \
 		-o $(DCT_SANITIZE_BINARY)
 	./$(DCT_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(BIOHASH_TEST) \
+		-lm \
+		-o $(BIOHASH_SANITIZE_BINARY)
+	./$(BIOHASH_SANITIZE_BINARY)
 
 clean:
 	rm -rf $(BUILD_DIR)
