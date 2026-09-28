@@ -69,7 +69,17 @@ UNLINKABILITY_EXPERIMENT_TEST := tests/test_unlinkability_experiment.c
 UNLINKABILITY_EXPERIMENT_TEST_BINARY := $(BUILD_DIR)/test_unlinkability_experiment
 UNLINKABILITY_EXPERIMENT_SANITIZE_BINARY := $(BUILD_DIR)/test_unlinkability_experiment_sanitize
 
-.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-sanitize clean
+DATASET_SOURCE := src/dataset.c
+DATASET_TEST := tests/test_dataset.c
+DATASET_TEST_BINARY := $(BUILD_DIR)/test_dataset
+DATASET_SANITIZE_BINARY := $(BUILD_DIR)/test_dataset_sanitize
+
+CLI_SOURCE := src/biohash_evaluate.c
+CLI_BINARY := $(BUILD_DIR)/biohash-evaluate
+CLI_SANITIZE_BINARY := $(BUILD_DIR)/biohash-evaluate-sanitize
+CLI_TEST := tests/test_cli.sh
+
+.PHONY: all test test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-dataset test-cli cli test-sanitize clean
 
 all: test
 
@@ -262,7 +272,56 @@ $(UNLINKABILITY_EXPERIMENT_TEST_BINARY): \
 test-unlinkability-experiment: $(UNLINKABILITY_EXPERIMENT_TEST_BINARY)
 	./$(UNLINKABILITY_EXPERIMENT_TEST_BINARY)
 
-test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment
+$(DATASET_TEST_BINARY): \
+	$(DATASET_SOURCE) \
+	$(DATASET_TEST) \
+	include/dataset.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		$(DATASET_SOURCE) \
+		$(DATASET_TEST) \
+		-lm \
+		-o $(DATASET_TEST_BINARY)
+
+test-dataset: $(DATASET_TEST_BINARY)
+	./$(DATASET_TEST_BINARY)
+
+$(CLI_BINARY): \
+	$(BBS_SOURCE) \
+	$(GRAM_SCHMIDT_SOURCE) \
+	$(DCT_SOURCE) \
+	$(BIOHASH_SOURCE) \
+	$(MATCHER_SOURCE) \
+	$(EVALUATION_SOURCE) \
+	$(EXPERIMENT_SOURCE) \
+	$(DATASET_SOURCE) \
+	$(CLI_SOURCE) \
+	include/bbs.h \
+	include/gram_schmidt.h \
+	include/dct.h \
+	include/biohash.h \
+	include/matcher.h \
+	include/evaluation.h \
+	include/experiment.h \
+	include/dataset.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(MATCHER_SOURCE) \
+		$(EVALUATION_SOURCE) \
+		$(EXPERIMENT_SOURCE) \
+		$(DATASET_SOURCE) \
+		$(CLI_SOURCE) \
+		-lm \
+		-o $(CLI_BINARY)
+
+cli: $(CLI_BINARY)
+
+test-cli: $(CLI_BINARY) $(CLI_TEST) examples/demo_features.csv
+	sh $(CLI_TEST) $(CLI_BINARY)
+
+test: test-bbs test-gram-schmidt test-dct test-biohash test-matcher test-evaluation test-experiment test-revocability test-unlinkability test-unlinkability-metric test-unlinkability-experiment test-dataset test-cli
 
 test-sanitize: | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(SANITIZERS) -g \
@@ -351,6 +410,28 @@ test-sanitize: | $(BUILD_DIR)
 		-lm \
 		-o $(UNLINKABILITY_EXPERIMENT_SANITIZE_BINARY)
 	./$(UNLINKABILITY_EXPERIMENT_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(DATASET_SOURCE) \
+		$(DATASET_TEST) \
+		-lm \
+		-o $(DATASET_SANITIZE_BINARY)
+	./$(DATASET_SANITIZE_BINARY)
+	$(CC) $(CFLAGS) $(SANITIZERS) -g \
+		$(BBS_SOURCE) \
+		$(GRAM_SCHMIDT_SOURCE) \
+		$(DCT_SOURCE) \
+		$(BIOHASH_SOURCE) \
+		$(MATCHER_SOURCE) \
+		$(EVALUATION_SOURCE) \
+		$(EXPERIMENT_SOURCE) \
+		$(DATASET_SOURCE) \
+		$(CLI_SOURCE) \
+		-lm \
+		-o $(CLI_SANITIZE_BINARY)
+	./$(CLI_SANITIZE_BINARY) \
+		--input examples/demo_features.csv \
+		--hash-length 3 \
+		> /dev/null
 
 clean:
 	rm -rf $(BUILD_DIR)
