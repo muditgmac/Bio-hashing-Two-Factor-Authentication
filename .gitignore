@@ -3,3 +3,7 @@ build/
 *.out
 .DS_Store
 evaluation/results/
+
+# Downloaded / generated biometric data
+data/cache/
+data/generated/
